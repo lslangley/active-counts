@@ -29,11 +29,14 @@
 <p>
 
 <div id="map"></div>
+<select multiple id="dates"></select>
+<button id="submit-dates">submit</button>
 <div id="weather"></div>
 <div id="container"></div>
 <script type="text/javascript">
 	var locations, counts;
 	var weatherData = [];
+	var counters;
 	// Provide your access token
 	L.mapbox.accessToken = 'pk.eyJ1IjoiYXRscmVnaW9uYWwiLCJhIjoiQmZ6d2tyMCJ9.oENm3NSf--qHrimdm9Vvdw';
 	// Create a map in the div #map
@@ -44,7 +47,57 @@
         var URL = "1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI"
         Tabletop.init( { key: URL, callback: showInfo } )
         // Tabletop.init( { key: URL2, callback: shapesMap, simpleSheet: true } )
-      })
+        $('#submit-dates').on('click', function(e){
+        	var dateValues = $('#dates').val();
+        	console.log(dateValues);
+        	var visibleStations = [];
+        	for (var i = dateValues.length - 1; i >= 0; i--) {
+        		// var existingStations = visibleStations;
+        		console.log(visibleStations)
+        		console.log(dateValues[i])
+        		console.log(Object.keys(countsDates[dateValues[i]]))
+        		visibleStations.push.apply(visibleStations, Object.keys(countsDates[dateValues[i]]))
+        		// visibleStations = $.merge(Object.keys(countsDates[dateValues[i]]), visibleStations);
+        		// console.log(Object.keys(countsDates[dateValues[i]]))
+        		// console.log(counters.getLayers())
+        		var layers = counters.getLayers()
+        		for (var j = layers.length - 1; j >= 0; j--) {
+        			// console.log(layers[i].feature.opts.StationID);
+        			var id = layers[j].feature.opts.StationID;
+        			if (visibleStations.indexOf(id) === -1){
+        				layers[j].setStyle({fill: false, stroke: false});
+        			}
+        			else{
+        				layers[j].setStyle({fill: true, stroke: true});
+        				layers[j].setRadius(getCount(layers[j].feature)/10);
+        			}
+
+        		};
+        		// if (Object.keys(countsDates[dateValues[i]])){
+
+        		// }
+        	} // end for dateValues
+        	console.log(visibleStations);
+
+        }) // end submit click
+      }) // end DOMContentLoaded
+	function getCount(feature){
+		var total = 0
+		var countData = counts[feature.opts.StationID];
+		for (var i = 0; i < countData.length; i++) {
+			var sum = 0;
+			for (var key in countData[i]) {
+			    if (countData[i].hasOwnProperty(key)) {
+			        // console.log(key)
+			        if (/CntIinterval/g.test(key)){
+			        	sum += +countData[i][key];
+			        }
+			    }
+			}
+			total += sum;
+		}
+		return total;
+	}
 	function getStationData(e){
 		$('#weather').empty();
 		drawChart();
@@ -249,10 +302,19 @@
 		counts = d3.nest()
     		.key(function(d) { return d.StationID; })
     		.map(data.Counts.elements);
+    	countsDates = d3.nest()
+    		.key(function(d) { return d.Date; })
+    		.key(function(d) { return d.StationID; })
+    		.map(data.Counts.elements);
     	countIntervals = d3.nest()
     		.key(function(d) { return d.StationID; })
     		.key(function(d) { return d.CntInterval; })
     		.map(data.Counts.elements);
+    	console.log(countsDates);
+    	var dates = Object.keys(countsDates).sort();
+    	for (var i = 0; i < dates.length; i++) {
+    		$('#dates').append('<option>' + dates[i] + '</option>');
+    	};
 		var optionsJSON = ["Description", "Technology", "CntIinterval1", "YrCount","MoCount","DayCount"]
 		var template = "<ul>"
 		             + "<li>{{Technology}}</li>"
@@ -266,10 +328,15 @@
 		console.log(geoJSON);
 		// var marker = L.marker([33, -86]).addTo(map);
 		var stations = [];
-		var counters = L.geoJson(geoJSON, {
-			style: function(feature){
-				return {color: 'blue'}
-			},
+		counters = L.geoJson(geoJSON, {
+			pointToLayer: function(feature, latlng) {
+		        return L.circleMarker(latlng, {
+		            // Here we use the `count` property in GeoJSON verbatim: if it's
+		            // to small or two large, we can use basic math in Javascript to
+		            // adjust it so that it fits the map better.
+		            radius: 10
+		        })
+		    },
 			onEachFeature: function(feature, layer){
 				layer.bindPopup("<strong>StationID:</strong> " + feature.opts.StationID
 					// +"<br />"
