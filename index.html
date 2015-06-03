@@ -134,20 +134,20 @@
 			content.push(dateTime.format("dddd, MMMM Do YYYY, h:mm:ss a"));
 			console.log(content);
 			if (!(dates.indexOf(date) > -1) ){
-				$.getJSON('http://api.wunderground.com/api/4fa8163ffde1665b/history_'+date+'/q/GA/Atlanta.json', function(data){
-					console.log(date)
-					weatherData.push(data);
-					console.log(data.history.dailysummary[0]);
-					var weather = data.history.dailysummary[0];
-					var maxTemp = weather.maxtempi;
-					var minTemp = weather.mintempi;
-					var precip = weather.precipi;
-					var wind = weather.wspdi;
-					var snow = weather.snow;
-					var thunder = weather.thunder;
-					console.log(i);
-					$('#weather').append(formatWeather(weather));
-				})
+				// $.getJSON('http://api.wunderground.com/api/4fa8163ffde1665b/history_'+date+'/q/GA/Atlanta.json', function(data){
+				// 	console.log(date)
+				// 	weatherData.push(data);
+				// 	console.log(data.history.dailysummary[0]);
+				// 	var weather = data.history.dailysummary[0];
+				// 	var maxTemp = weather.maxtempi;
+				// 	var minTemp = weather.mintempi;
+				// 	var precip = weather.precipi;
+				// 	var wind = weather.wspdi;
+				// 	var snow = weather.snow;
+				// 	var thunder = weather.thunder;
+				// 	console.log(i);
+				// 	$('#weather').append(formatWeather(weather));
+				// })
 			}
 			dates.push(date);
 			console.log(dates);
