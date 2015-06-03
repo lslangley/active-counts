@@ -7,8 +7,11 @@
 	<script src="bower_components/tabletop/src/tabletop.js"></script>
 	<script src="bower_components/sheetsee/js/sheetsee.js"></script>
 	<script src="bower_components/moment/min/moment.min.js"></script>
-
-	<link rel='stylesheet' type='text/css' href='http://api.tiles.mapbox.com/mapbox.js/v1.0.0/mapbox.css'  />
+	<script src="bower_components/d3/d3.min.js"></script>
+	<script src="http://code.highcharts.com/highcharts.js"></script>
+	<script src="http://code.highcharts.com/modules/exporting.js"></script>
+	<script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.9/mapbox.js'></script>
+	<link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.9/mapbox.css' rel='stylesheet' />
 	<link rel="stylesheet" type="text/css" href="bower_components/weather-icons/css/weather-icons.min.css">
 	<style type="text/css">
 		#map, #shapesmap {max-width: 800px; height: 500px;}
@@ -26,36 +29,268 @@
 <p>
 
 <div id="map"></div>
+<div id="weather"></div>
+<div id="container"></div>
 <script type="text/javascript">
+	var locations, counts;
+	var weatherData = [];
+	// Provide your access token
+	L.mapbox.accessToken = 'pk.eyJ1IjoiYXRscmVnaW9uYWwiLCJhIjoiQmZ6d2tyMCJ9.oENm3NSf--qHrimdm9Vvdw';
+	// Create a map in the div #map
+	var map = L.mapbox.map('map', 'atlregional.tm2-basemap');
+
 	// https://docs.google.com/spreadsheets/d/1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI/edit?usp=sharing
 	document.addEventListener('DOMContentLoaded', function() {
         var URL = "1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI"
-        Tabletop.init( { key: URL, callback: showInfo, simpleSheet: true } )
+        Tabletop.init( { key: URL, callback: showInfo } )
         // Tabletop.init( { key: URL2, callback: shapesMap, simpleSheet: true } )
       })
+	function getStationData(e){
+		$('#weather').empty();
+		drawChart();
+		var count = e.target.feature;
+		var content = [];
+		var dates = [];
+		var total = 0
+		var countData = counts[e.target.feature.opts.StationID];
+		for (var i = 0; i < countData.length; i++) {
+			var sum = 0;
+			for (var key in countData[i]) {
+			    if (countData[i].hasOwnProperty(key)) {
+			        // console.log(key)
+			        if (/CntIinterval/g.test(key)){
+			        	sum += +countData[i][key];
+			        }
+			    }
+			}
+			total += sum;
+			console.log(sum)
+			console.log(countData[i]);
+			var month = countData[i].MoCount.length >= 2 ? countData[i].MoCount : '0' + countData[i].MoCount;
+			var day = countData[i].DayCount.length >= 2 ? countData[i].DayCount : '0' + countData[i].DayCount;
+			var date = countData[i].YrCount + month + day;
+			var minutes = countData[i].CntStartTime.substr(countData[i].CntStartTime.length - 2)
+			var hours = countData[i].CntStartTime.length === 4 ? countData[i].CntStartTime.substr(0,2) : countData[i].CntStartTime.substr(0, 1);
+			var dateTime = moment(date + ' ' + hours + ':' + minutes, "YYYYMMDD H:mm");
+			console.log(dateTime.format());
+			console.log(minutes);
+			console.log(e.target.feature);
+			if (i === 0){
+				$('#weather').append('<h4>' + countData[i].Description + '</h4>');
+			}
+			content.push(dateTime.format("dddd, MMMM Do YYYY, h:mm:ss a"));
+			console.log(content);
+			if (!(dates.indexOf(date) > -1) ){
+				$.getJSON('http://api.wunderground.com/api/4fa8163ffde1665b/history_'+date+'/q/GA/Atlanta.json', function(data){
+					console.log(date)
+					weatherData.push(data);
+					console.log(data.history.dailysummary[0]);
+					var weather = data.history.dailysummary[0];
+					var maxTemp = weather.maxtempi;
+					var minTemp = weather.mintempi;
+					var precip = weather.precipi;
+					var wind = weather.wspdi;
+					var snow = weather.snow;
+					var thunder = weather.thunder;
+					console.log(i);
+					$('#weather').append(formatWeather(weather));
+				})
+			}
+			dates.push(date);
+			console.log(dates);
+			var svg = d3.select("body").append("svg").attr("width", 100).attr("height", 100);
 
-      function showInfo(data) {
-      	console.log(data);
-        var optionsJSON = ["Description", "Technology", "CntIinterval1"]
-        var template = "<ul>"
-                     + "<li>{{Technology}}</li>"
-                     + "<li>Count = {{CntIinterval1}}</li>"
-                     + "<li><h4>{{Description}}</h4></li></ul>"
-        var geoJSON = Sheetsee.createGeoJSON(data, optionsJSON)
-        console.log(geoJSON);
-        var map = Sheetsee.loadMap("map")
-        Sheetsee.addTileLayer(map, 'examples.map-20v6611k')
-        Sheetsee.addMarkerLayer(geoJSON, map, template)
-      }
-</script>
-<script>
-  var callbackFunction = function(data) {
-    var results = data.query.results;
-    console.log(results);
-  };
-</script>
+			var rect = svg.append("rect").attr("x", 40).attr("y", 40).attr("height", countData[i].CntIinterval1).attr("width", 10);
 
-<script src="https://query.yahooapis.com/v1/public/yql?q=select wind from weather.forecast where woeid in (select woeid from geo.places(1) where text='atlanta, ga')&format=json&callback=callbackFunction"></script>
+			rect.on("click", function() {
+			    console.log("rect");
+			});
+			svg.on("click", function() { console.log("svg"); });
+		};
+		console.log(total);
+		
+
+	}
+	function formatWeather(weather){
+		var weatherString = weather.date.pretty.split(' on ')[1] + '<br />';
+		if (+weather.thunder){
+			weatherString += '<i class="wi wi-lightning"></i>'
+		}
+		else if (+weather.snow) {
+			weatherString += '<i class="wi wi-snow"></i>'
+		}
+		else if (+weather.rain) {
+			weatherString += '<i class="wi wi-rain"></i>'
+		}
+		else if (+weather.maxwspdi > 24){
+			weatherString += '<i class="wi wi-cloudy-gusts"></i>'
+		}
+		else {
+			weatherString += '<i class="wi wi-day-sunny"></i>'
+		}
+		return 	weatherString + 
+				'<p>hi: ' + weather.maxtempi + '</p><p>low: ' + weather.mintempi + '</p>' +
+				'<p><small>weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground</a></small></p>'
+	}
+
+	function drawChart(){
+		$(function () {
+		    $('#container').highcharts({
+		        chart: {
+		            zoomType: 'xy'
+		        },
+		        title: {
+		            text: 'Average Monthly Weather Data for Tokyo'
+		        },
+		        subtitle: {
+		            text: 'Source: WorldClimate.com'
+		        },
+		        xAxis: [{
+		            categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+		                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+		            crosshair: true
+		        }],
+		        yAxis: [{ // Primary yAxis
+		            labels: {
+		                format: '{value}°C',
+		                style: {
+		                    color: Highcharts.getOptions().colors[2]
+		                }
+		            },
+		            title: {
+		                text: 'Temperature',
+		                style: {
+		                    color: Highcharts.getOptions().colors[2]
+		                }
+		            },
+		            opposite: true
+
+		        }, { // Secondary yAxis
+		            gridLineWidth: 0,
+		            title: {
+		                text: 'Rainfall',
+		                style: {
+		                    color: Highcharts.getOptions().colors[0]
+		                }
+		            },
+		            labels: {
+		                format: '{value} mm',
+		                style: {
+		                    color: Highcharts.getOptions().colors[0]
+		                }
+		            }
+
+		        }, { // Tertiary yAxis
+		            gridLineWidth: 0,
+		            title: {
+		                text: 'Sea-Level Pressure',
+		                style: {
+		                    color: Highcharts.getOptions().colors[1]
+		                }
+		            },
+		            labels: {
+		                format: '{value} mb',
+		                style: {
+		                    color: Highcharts.getOptions().colors[1]
+		                }
+		            },
+		            opposite: true
+		        }],
+		        tooltip: {
+		            shared: true
+		        },
+		        legend: {
+		            layout: 'vertical',
+		            align: 'left',
+		            x: 80,
+		            verticalAlign: 'top',
+		            y: 55,
+		            floating: true,
+		            backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+		        },
+		        series: [{
+		            name: 'Rainfall',
+		            type: 'column',
+		            yAxis: 1,
+		            data: [49.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4],
+		            tooltip: {
+		                valueSuffix: ' mm'
+		            }
+
+		        }, {
+		            name: 'Sea-Level Pressure',
+		            type: 'spline',
+		            yAxis: 2,
+		            data: [1016, 1016, 1015.9, 1015.5, 1012.3, 1009.5, 1009.6, 1010.2, 1013.1, 1016.9, 1018.2, 1016.7],
+		            marker: {
+		                enabled: false
+		            },
+		            dashStyle: 'shortdot',
+		            tooltip: {
+		                valueSuffix: ' mb'
+		            }
+
+		        }, {
+		            name: 'Temperature',
+		            type: 'spline',
+		            data: [7.0, 6.9, 9.5, 14.5, 18.2, 21.5, 25.2, 26.5, 23.3, 18.3, 13.9, 9.6],
+		            tooltip: {
+		                valueSuffix: ' °C'
+		            }
+		        }]
+		    });
+		});
+
+
+	}
+	function showInfo(data) {
+		console.log(data);
+		locations = data.Locations;
+		counts = d3.nest()
+    		.key(function(d) { return d.StationID; })
+    		.map(data.Counts.elements);
+    	countIntervals = d3.nest()
+    		.key(function(d) { return d.StationID; })
+    		.key(function(d) { return d.CntInterval; })
+    		.map(data.Counts.elements);
+		var optionsJSON = ["Description", "Technology", "CntIinterval1", "YrCount","MoCount","DayCount"]
+		var template = "<ul>"
+		             + "<li>{{Technology}}</li>"
+		             + "<li>Count = {{CntIinterval1}}</li>"
+		             + "<li><h4>{{Description}}</h4></li></ul>";
+		// var geo = createGeoJSON(data, optionsJSON);
+		// for (var i = data.length - 1; i >= 0; i--) {
+		// 	console.log(data[i]);
+		// };
+		var geoJSON = Sheetsee.createGeoJSON(locations.elements);
+		console.log(geoJSON);
+		// var marker = L.marker([33, -86]).addTo(map);
+		var stations = [];
+		var counters = L.geoJson(geoJSON, {
+			style: function(feature){
+				return {color: 'blue'}
+			},
+			onEachFeature: function(feature, layer){
+				layer.bindPopup("<strong>StationID:</strong> " + feature.opts.StationID
+					// +"<br />"
+		   //           + "Count = "+feature.opts.CntIinterval1+"<br />"
+		   //           + "<strong>"+feature.opts.Description+"</strong>"
+		        );
+				layer.on({
+					click: getStationData
+				});
+				stations.push(feature.opts.StationID);
+			}
+		}).addTo(map);
+		console.log(counters);
+		map.fitBounds(counters.getBounds());
+		// var map = Sheetsee.loadMap("map")
+		// Sheetsee.addTileLayer(map, 'mapbox.streets')
+		// Sheetsee.addMarkerLayer(geoJSON, map, template)
+
+		// http://api.wunderground.com/api/4fa8163ffde1665b/history_20060405/q/GA/Atlanta.json
+	}
+</script>
 </body>
 
 </html>
