@@ -10723,7 +10723,8 @@ function buildOptionObject(optionsJSON, lineItem) {
   return newObj
 }
 
-module.exports.makeupOptionObject = function(lineItem) {
+module.exports.makeupOptionObject = makeupOptionObject
+function makeupOptionObject(lineItem) {
   var options = []
   for (var i in lineItem) {
     options.push(i);
@@ -10741,6 +10742,35 @@ module.exports.createGeoJSON = function(data, optionsJSON) {
     if (!hasGeo) return
 
     if (!optionsJSON) {
+      optionsJSON = makeupOptionObject(lineItem)
+      var optionObj = buildOptionObject(optionsJSON, lineItem)
+    } else {
+      optionObj = buildOptionObject(optionsJSON, lineItem)
+    }
+
+    var type = determineType(lineItem)
+
+    if (lineItem.polygon || lineItem.multipolygon || lineItem.linestring) {
+      var shapeFeature = shapeJSON(lineItem, type, optionObj)
+      geoJSON.push(shapeFeature)
+    } else {
+      var pointFeature = pointJSON(lineItem, type, optionObj)
+      geoJSON.push(pointFeature)
+      }
+  })
+  return geoJSON
+}
+
+module.exports.createMergeGeoJSON = function(data, optionsJSON, mergeField) {
+  var geoJSON = []
+  data.forEach(function(lineItem){
+    var hasGeo = confirmGeo(lineItem)
+
+    if (hasGeo && !lineItem.lat && !lineItem.long) handleLatLong(lineItem)
+    if (lineItem.linestring || lineItem.multipolygon) hasGeo = true
+    if (!hasGeo) return
+
+    if (!optionsJSON || optionsJSON.length === 0) {
       optionsJSON = makeupOptionObject(lineItem)
       var optionObj = buildOptionObject(optionsJSON, lineItem)
     } else {
