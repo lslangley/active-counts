@@ -69,7 +69,7 @@
         			}
         			else{
         				layers[j].setStyle({fill: true, stroke: true});
-        				layers[j].setRadius(getCount(layers[j].feature)/10);
+        				layers[j].setRadius(getCount(layers[j].feature, dateValues[i])/10, dateValues[i]);
         			}
 
         		};
@@ -81,12 +81,16 @@
 
         }) // end submit click
       }) // end DOMContentLoaded
-	function getCount(feature){
+	function getCount(feature, date){
 		var total = 0
-		var countData = counts[feature.opts.StationID];
+		var countData = countsDates[date][feature.opts.StationID];
+		console.log(countData);
 		for (var i = 0; i < countData.length; i++) {
 			var sum = 0;
 			for (var key in countData[i]) {
+			// for (var j = countData.length - 1; i >= 0; i--) {
+			// 	countData[i]
+			// };
 			    if (countData[i].hasOwnProperty(key)) {
 			        // console.log(key)
 			        if (/CntIinterval/g.test(key)){
@@ -100,28 +104,20 @@
 	}
 	function getStationData(e){
 		$('#weather').empty();
-		drawChart();
 		var count = e.target.feature;
+		var id = e.target.feature.opts.StationID;
 		var content = [];
 		var dates = [];
-		var total = 0
-		var countData = counts[e.target.feature.opts.StationID];
+		var total = 0;
+		var totals = [];
+		var countData = counts[id];
 		for (var i = 0; i < countData.length; i++) {
-			var sum = 0;
-			for (var key in countData[i]) {
-			    if (countData[i].hasOwnProperty(key)) {
-			        // console.log(key)
-			        if (/CntIinterval/g.test(key)){
-			        	sum += +countData[i][key];
-			        }
-			    }
-			}
-			total += sum;
-			console.log(sum)
+
 			console.log(countData[i]);
-			var month = countData[i].MoCount.length >= 2 ? countData[i].MoCount : '0' + countData[i].MoCount;
-			var day = countData[i].DayCount.length >= 2 ? countData[i].DayCount : '0' + countData[i].DayCount;
-			var date = countData[i].YrCount + month + day;
+			var date = countData[i].Date;
+
+			total = getCount(count, date);
+			
 			var minutes = countData[i].CntStartTime.substr(countData[i].CntStartTime.length - 2)
 			var hours = countData[i].CntStartTime.length === 4 ? countData[i].CntStartTime.substr(0,2) : countData[i].CntStartTime.substr(0, 1);
 			var dateTime = moment(date + ' ' + hours + ':' + minutes, "YYYYMMDD H:mm");
@@ -131,9 +127,14 @@
 			if (i === 0){
 				$('#weather').append('<h4>' + countData[i].Description + '</h4>');
 			}
+			else if (i === countData.length - 1){
+				// $('#weather').append('<p>'+date+' count: ' + total + '</p>');
+			}
 			content.push(dateTime.format("dddd, MMMM Do YYYY, h:mm:ss a"));
 			console.log(content);
+			
 			if (!(dates.indexOf(date) > -1) ){
+				// Get weather for unique days
 				// $.getJSON('http://api.wunderground.com/api/4fa8163ffde1665b/history_'+date+'/q/GA/Atlanta.json', function(data){
 				// 	console.log(date)
 				// 	weatherData.push(data);
@@ -148,19 +149,24 @@
 				// 	console.log(i);
 				// 	$('#weather').append(formatWeather(weather));
 				// })
+
+				// Only add date/total count is it's a new value
+				dates.push(date);
+				totals.push(total);
 			}
-			dates.push(date);
+			
 			console.log(dates);
-			var svg = d3.select("body").append("svg").attr("width", 100).attr("height", 100);
+			// var svg = d3.select("body").append("svg").attr("width", 100).attr("height", 100);
 
-			var rect = svg.append("rect").attr("x", 40).attr("y", 40).attr("height", countData[i].CntIinterval1).attr("width", 10);
+			// var rect = svg.append("rect").attr("x", 40).attr("y", 40).attr("height", total).attr("width", 10);
 
-			rect.on("click", function() {
-			    console.log("rect");
-			});
-			svg.on("click", function() { console.log("svg"); });
+			// rect.on("click", function() {
+			//     console.log("rect");
+			// });
+			// svg.on("click", function() { console.log("svg"); });
 		};
 		console.log(total);
+		drawChart(totals, dates);
 		
 
 	}
@@ -186,7 +192,7 @@
 				'<p><small>weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground</a></small></p>'
 	}
 
-	function drawChart(){
+	function drawChart(totals, dates){
 		$(function () {
 		    $('#container').highcharts({
 		        chart: {
@@ -199,8 +205,7 @@
 		            text: 'Source: WorldClimate.com'
 		        },
 		        xAxis: [{
-		            categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-		                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+		            categories: dates,
 		            crosshair: true
 		        }],
 		        yAxis: [{ // Primary yAxis
@@ -221,13 +226,13 @@
 		        }, { // Secondary yAxis
 		            gridLineWidth: 0,
 		            title: {
-		                text: 'Rainfall',
+		                text: 'Count',
 		                style: {
 		                    color: Highcharts.getOptions().colors[0]
 		                }
 		            },
 		            labels: {
-		                format: '{value} mm',
+		                format: '{value} cyclists',
 		                style: {
 		                    color: Highcharts.getOptions().colors[0]
 		                }
@@ -262,12 +267,12 @@
 		            backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
 		        },
 		        series: [{
-		            name: 'Rainfall',
+		            name: 'Count',
 		            type: 'column',
 		            yAxis: 1,
-		            data: [49.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4],
+		            data: totals,
 		            tooltip: {
-		                valueSuffix: ' mm'
+		                valueSuffix: ' cyclists'
 		            }
 
 		        }, {
