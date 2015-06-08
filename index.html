@@ -270,10 +270,12 @@
 		                    color: Highcharts.getOptions().colors[2]
 		                }
 		            },
+		            min: 0,
 		            opposite: true
 
 		        }, { // Secondary yAxis
 		            gridLineWidth: 0,
+		            min: 0,
 		            title: {
 		                text: 'Count',
 		                style: {
@@ -290,7 +292,7 @@
 		        }, { // Tertiary yAxis
 		            gridLineWidth: 0,
 		            title: {
-		                text: 'Sea-Level Pressure',
+		                text: 'Rainfall',
 		                style: {
 		                    color: Highcharts.getOptions().colors[1]
 		                }
@@ -301,6 +303,7 @@
 		                    color: Highcharts.getOptions().colors[1]
 		                }
 		            },
+		            min: 0,
 		            opposite: true
 		        }],
 		        tooltip: {
