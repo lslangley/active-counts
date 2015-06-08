@@ -57,6 +57,7 @@
 <script type="text/javascript">
 	var locations, counts;
 	var weatherData = [];
+	var ePrev;
 	var counters;
 	// Provide your access token
 	L.mapbox.accessToken = 'pk.eyJ1IjoiYXRscmVnaW9uYWwiLCJhIjoiQmZ6d2tyMCJ9.oENm3NSf--qHrimdm9Vvdw';
@@ -64,6 +65,9 @@
 	var map = L.mapbox.map('map', 'atlregional.tm2-basemap');
 	map.on('popupclose', function(e) {
 		$('#chart').hide();
+		if(typeof ePrev !== 'undefined'){
+			ePrev.target.setStyle({fillColor:'blue'});
+		}
 	});
 	// https://docs.google.com/spreadsheets/d/1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI/edit?usp=sharing
 	document.addEventListener('DOMContentLoaded', function() {
@@ -136,6 +140,7 @@
 		$('#weather').empty();
 		var count = e.target.feature;
 		var id = e.target.feature.opts.StationID;
+		e.target.setStyle({fillColor:'red'});
 		var content = [];
 		var description = '';
 		var dates = [];
@@ -198,7 +203,7 @@
 		};
 		console.log(total);
 		drawChart(totals, dates, description);
-		
+		ePrev = e;
 
 	}
 	function formatWeather(weather){
