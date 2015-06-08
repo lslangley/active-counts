@@ -31,6 +31,7 @@
 <div id="map"></div>
 <select multiple id="dates"></select>
 <button id="submit-dates">submit</button>
+<button id="clear-dates">clear</button>
 <div id="weather"></div>
 <div id="container"></div>
 <script type="text/javascript">
@@ -80,6 +81,13 @@
         	console.log(visibleStations);
 
         }) // end submit click
+		$('#clear-dates').on('click', function(e){
+			var layers = counters.getLayers()
+        	for (var j = layers.length - 1; j >= 0; j--) {
+        		layers[j].setStyle({fill: true, stroke: true});
+        		layers[j].setRadius(10);
+        	}
+		});
       }) // end DOMContentLoaded
 	function getCount(feature, date){
 		var total = 0
