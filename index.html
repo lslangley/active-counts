@@ -56,7 +56,7 @@
 
 <div id="chart"></div>
 <script type="text/javascript">
-	var locations, counts;
+	var locations, counts, weather, chart;
 	var weatherData = [];
 	var ePrev;
 	var counters;
@@ -69,6 +69,9 @@
 		if(typeof ePrev !== 'undefined'){
 			ePrev.target.setStyle({fillColor:'blue'});
 		}
+	});
+	map.on('click', function(e) {
+		console.log(e);
 	});
 	// https://docs.google.com/spreadsheets/d/1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI/edit?usp=sharing
 	document.addEventListener('DOMContentLoaded', function() {
@@ -145,12 +148,14 @@
 		var content = [];
 		var description = '';
 		var dates = [];
+		var rains = [];
+		var temps = [];
 		var total = 0;
 		var totals = [];
 		var countData = counts[id];
 		for (var i = 0; i < countData.length; i++) {
 			console.log(countData[i]);
-			var date = countData[i].Date;
+			var date = countData[i].DateClean;
 
 			total = getCount(count, date);
 			
@@ -184,12 +189,17 @@
 				// 	var snow = weather.snow;
 				// 	var thunder = weather.thunder;
 				// 	console.log(i);
-				// 	$('#weather').append(formatWeather(weather));
+				// 	// $('#weather').append(formatWeather(weather));
+				// 	rains.push(precip);
+				// 	temps.push(maxTemp);
 				// })
 
 				// Only add date/total count is it's a new value
 				dates.push(date);
 				totals.push(total);
+				rains.push(+weather[date][0].Precipitation);
+				temps.push(+weather[date][0].MaxTemp);
+				
 			}
 			
 			console.log(dates);
@@ -203,7 +213,7 @@
 			// svg.on("click", function() { console.log("svg"); });
 		};
 		console.log(total);
-		drawChart(totals, dates, description);
+		drawChart(description, totals, dates, rains, temps);
 		ePrev = e;
 
 	}
@@ -229,10 +239,11 @@
 				'<p><small>weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground</a></small></p>'
 	}
 
-	function drawChart(totals, dates, description){
+	function drawChart(description, totals, dates, rains, temps){
+		console.log(rains);
 		$('#chart').show();
 		$(function () {
-		    $('#chart').highcharts({
+		    chart = $('#chart').highcharts({
 		        chart: {
 		            zoomType: 'xy'
 		        },
@@ -248,7 +259,7 @@
 		        }],
 		        yAxis: [{ // Primary yAxis
 		            labels: {
-		                format: '{value}°C',
+		                format: '{value}°F',
 		                style: {
 		                    color: Highcharts.getOptions().colors[2]
 		                }
@@ -285,7 +296,7 @@
 		                }
 		            },
 		            labels: {
-		                format: '{value} mb',
+		                format: '{value} in',
 		                style: {
 		                    color: Highcharts.getOptions().colors[1]
 		                }
@@ -314,24 +325,24 @@
 		            }
 
 		        }, {
-		            name: 'Sea-Level Pressure',
+		            name: 'Rainfall',
 		            type: 'spline',
 		            yAxis: 2,
-		            data: [1016, 1016, 1015.9, 1015.5, 1012.3, 1009.5, 1009.6, 1010.2, 1013.1, 1016.9, 1018.2, 1016.7],
+		            data: rains,
 		            marker: {
 		                enabled: false
 		            },
 		            dashStyle: 'shortdot',
 		            tooltip: {
-		                valueSuffix: ' mb'
+		                valueSuffix: ' inches'
 		            }
 
 		        }, {
 		            name: 'Temperature',
 		            type: 'spline',
-		            data: [7.0, 6.9, 9.5, 14.5, 18.2, 21.5, 25.2, 26.5, 23.3, 18.3, 13.9, 9.6],
+		            data: temps,
 		            tooltip: {
-		                valueSuffix: ' °C'
+		                valueSuffix: ' °F'
 		            }
 		        }]
 		    });
@@ -342,11 +353,14 @@
 	function showInfo(data) {
 		console.log(data);
 		locations = data.Locations;
+		weather = d3.nest()
+    		.key(function(d) { return d.DateClean; })
+    		.map(data.Weather.elements);;
 		counts = d3.nest()
     		.key(function(d) { return d.StationID; })
     		.map(data.Counts.elements);
     	countsDates = d3.nest()
-    		.key(function(d) { return d.Date; })
+    		.key(function(d) { return d.DateClean; })
     		.key(function(d) { return d.StationID; })
     		.map(data.Counts.elements);
     	countIntervals = d3.nest()
