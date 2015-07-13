@@ -3,20 +3,31 @@
 <meta name=viewport content="width=device-width, initial-scale=1">
 <html>
 <head>
-	<title>ARC Bike Counts</title>
+	<title>ARC Active Counts</title>
 	<script src="bower_components/jquery/dist/jquery.min.js"></script>
+	<script type="text/javascript" src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="bower_components/seiyria-bootstrap-slider/dist/bootstrap-slider.min.js"></script>
 	<script src="bower_components/tabletop/src/tabletop.js"></script>
 	<script src="bower_components/sheetsee/js/sheetsee.js"></script>
 	<script src="bower_components/moment/min/moment.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.9.3/lodash.min.js"></script>
 	<script src="bower_components/d3/d3.min.js"></script>
 	<script src="http://code.highcharts.com/highcharts.js"></script>
 	<script src="http://code.highcharts.com/modules/exporting.js"></script>
+	<script src="assets/js/export-csv.js"></script>
+
 	<script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.9/mapbox.js'></script>
+	<script src='assets/js/leaflet.tooltip.js'></script>
 	<link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.9/mapbox.css' rel='stylesheet' />
 	<link rel="stylesheet" type="text/css" href="bower_components/weather-icons/css/weather-icons.min.css">
+	<link rel="stylesheet" type="text/css" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="bower_components/seiyria-bootstrap-slider/dist/css/bootstrap-slider.min.css">
+	<link rel="stylesheet" type="text/css" href="assets/css/leaflet.tooltip.css">
+	<link href='http://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 	<style type="text/css">
 		body {
-            padding: 0;
+			padding-top: 53px;
             margin: 0;
         }
         html, body {
@@ -25,237 +36,1244 @@
         }
         #map {
             height: 100%;
-            width: 100%;
+            width: auto;
+        }
+        #container {
+        	height: 100%;
+        	width: 100%;
+        	overflow: hidden;
         }
 	    a {border: none;}
-
 	    #chart {
-	    	height:50%;
-	    	opacity:.85;
-	    	position: absolute;
-	    	bottom: 0px;
+	    	height:80%;
+	    	/*opacity:0.8;*/
+	    	/*position: absolute;*/
+	    	/*float: right;*/
+	    	/*bottom: 0px;*/
 	    	width: 100%;
-	    	display: none;
+	    	/*display: none;*/
 	    }
+	    .vertical-center {
+			min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
+			min-height: 100vh; /* These two lines are counted as one :-)       */
+
+			display: flex;
+			align-items: center;
+		}
+	    .info {
+		    padding: 6px 8px;
+		    font: 14px/16px 'Droid Serif', serif;
+		    background: white;
+		    background: rgba(255,255,255,0.8);
+		    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+		    border-radius: 5px;
+		}
+		.info .info-controls h4 {
+		    margin: 0 0 5px;
+		    color: #777;
+		}
+		.info-controls {
+		    padding: 10px;
+		    font: 14px/16px 'Droid Serif', serif;
+		    background: white;
+		    background: rgba(255,255,255,1.0);
+		    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+		    border-radius: 5px;
+		    position:absolute; z-index:100; bottom:10px; left:10px;
+		    width: 650px;
+		}
+	    .legend {
+		    line-height: 18px;
+		    color: #555;
+		}
+		.legend i {
+		    width: 18px;
+		    height: 18px;
+		    float: left;
+		    margin-right: 8px;
+		    opacity: 0.7;
+		}
+		.legend .circle {
+		  border-radius: 50%;
+		  opacity:  1.0;
+		  width: 15px;
+		  height: 15px;
+		  margin-top: 0px;
+		}
+		#select-box {
+			border-style: dotted;
+			border-width: thin;
+			padding: 3px;
+			/*height: 200px;*/
+		}
+		#select-box h1{
+		    text-align: center;
+		    margin-top: -5px;
+		    height: 5px;
+		    line-height: 5px;
+		    font-size: 15px;
+		}
+
+		#select-box h1 span{
+		    background-color: white;
+		    opa
+		}
+		.input-simple:focus {
+			outline:0;
+		}
+		.input-simple {
+			border:0;
+    		border-bottom: 2px dotted;
+    		border-bottom-width: thin;
+		}
+		input label {
+			display: inline-block !important;
+		}
+		#filter-statement {
+			font-style: italic;
+			font-family: 'Droid Serif', serif;
+		}
+		.filter {
+			/*font-family: 'Helvetica', 'Arial' !important;*/
+			font-style: normal;
+		}
+		.spinner {
+		  display: inline-block;
+		  opacity: 0;
+		  width: 0;
+
+		  -webkit-transition: opacity 0.25s, width 0.25s;
+		  -moz-transition: opacity 0.25s, width 0.25s;
+		  -o-transition: opacity 0.25s, width 0.25s;
+		  transition: opacity 0.25s, width 0.25s;
+		}
+
+		.has-spinner.active {
+		  cursor:progress;
+		}
+
+		.has-spinner.active .spinner {
+		  opacity: 1;
+		  width: auto; /* This doesn't work, just fix for unkown width elements */
+		}
+
+		.has-spinner.btn-mini.active .spinner {
+		    width: 10px;
+		}
+
+		.has-spinner.btn-small.active .spinner {
+		    width: 13px;
+		}
+
+		.has-spinner.btn.active .spinner {
+		    width: 16px;
+		}
+
+		.has-spinner.btn-large.active .spinner {
+		    width: 19px;
+		}
+		.leaflet-tooltip p {
+			font-size: x-small;
+			margin: 0;
+		}
+		.verticalLine {
+		    border-left: thick solid #ff0000;
+		}
 	</style>
 </head>
 <body>
-<p style="position:absolute; top:10px; right:10px; z-index:100; background-color:white">
-	<em><a href="https://docs.google.com/spreadsheets/d/1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI/edit?usp=sharing" target="_blank">spreadsheet</a></em>
-	<i class="wi wi-day-lightning"></i>
-	<i class="wi wi-night-alt-snow"></i>
-</p>
+	<nav class="navbar navbar-default navbar-fixed-top" >
+  <div class="container">
+    <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://atlantaregional.com"><img width="40" height="17" src="assets/img/arc_logo@2x.png"></a>
+        </div>
 
-<div id="map" style="position:relative"></div>
-<div id="form" style="position:absolute; z-index:100; bottom:10px;">
-	<select multiple id="dates"></select>
-	<button id="submit-dates">submit</button>
-	<button id="clear-dates">clear</button>
-	<span id="weather"></span>
-</div>
-
-<div id="chart"></div>
+        <div id="navbar" class="navbar-collapse collapse">
+	          <ul class="nav navbar-nav">
+	            <!-- <li class="dropdown">
+	              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+	              <ul class="dropdown-menu">
+		                <li><a href="#">Action</a></li>
+		                <li><a href="#">Another action</a></li>
+		                <li><a href="#">Something else here</a></li>
+		                <li role="separator" class="divider"></li>
+		                <li class="dropdown-header">Nav header</li>
+		                <li><a href="#">Separated link</a></li>
+		                <li><a href="#">One more separated link</a></li>
+	              </ul>
+	            </li> -->
+	          </ul>
+		        <form class="navbar-form" role="search">
+		        <button type="button" class="pull-right btn btn-default filter" style="" disabled="disabled" id="clear-dates">clear</button>
+		            <p id="filter-statement">
+						Show me 
+						<!-- <input type="text" style="width:40px" class="input-simple" placeholder="bike"> -->
+						<select type="text" id="countType" class="form-control single filter" >
+							<option value="">all</option>
+							<option selected value="2">bike</option>
+							<option value="1">ped</option>
+							<!-- <option value="0">all</option> -->
+						</select> 
+						data for 
+						<select class="form-control single filter" id="season">
+							<option value="">all</option>
+							<option value="0">Winter</option>
+							<option value="1">Spring</option>
+							<option value="2">Summer</option>
+							<option value="3">Fall</option>
+						</select>
+						days
+						<select class="form-control single filter" id="temp-comparison">
+							<option value="">with any weather</option>
+							<option value="#temp-min">warmer than</option>
+							<option value="#temp-max">cooler than</option>
+							<option value="">with rain</option>
+						</select>
+						<span id="temp-field" style="display:none;">
+						than 
+						<input style="width:55px" type="text" class="form-control single filter temp" id="temp" placeholder="90">
+						°F.
+						</span>
+						<button class="btn btn-default single filter has-spinner" id="go-button" type="button">
+							<!-- <span class="spinner"><i class="fa fa-spinner"></i></span> -->
+							Go!
+						</button>
+						
+						<button class=" btn btn-default btn-xs" id="collapse-button" style="width:20px; margin-top:10px;" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">+</button>
+					</p>
+					<div id="collapseExample" class="collapse form-inline" style="">
+						<div class="form-group" style="" >
+							<select multiple class="form-control special filter" id="date"></select>
+							<select multiple class="form-control special filter" id="dow">
+								<option value="0">Sunday</option>
+								<option value="1">Monday</option>
+								<option value="2">Tuesday</option>
+								<option value="3">Wednesday</option>
+								<option value="4">Thursday</option>
+								<option value="5">Friday</option>
+								<option value="6">Saturday</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<select multiple class="form-control special filter" id="season">
+								<option value="0">Winter</option>
+								<option value="1">Spring</option>
+								<option value="2">Summer</option>
+								<option value="3">Fall</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<select multiple class="form-control special filter" id="weather">
+								<option value="rain">Rain</option>
+								<option value="thunder">Thunder</option>
+								<option value="snow">Snow</option>
+								<option value="fog">Fog</option>
+							</select>
+						</div>
+						<input style="width:55px" type="text" class="form-control special filter temp" id="temp" placeholder="90">
+						<div class="radio">
+						  <label>
+						    <input type="radio" name="tempRadios" class="special filter" id="temp-min" value="gte." checked>
+						    min
+						  </label>
+						</div>
+						<div class="radio">
+						  <label>
+						    <input type="radio" name="tempRadios" class="special filter" id="temp-max" value="lte.">
+						    max
+						  </label>
+						</div>
+						<input style="width:40px" id="scale-factor" data-slider-id='scale-factorSlider' type="text" data-slider-min="1" data-slider-max="10" data-slider-step="1" data-slider-value="5"/>
+					</div>
+		        </form>
+	         <!--  <ul class="nav navbar-nav navbar-right">
+	            <li><a href="../navbar/">Default</a></li>
+	            <li class="active"><a href="./">Static top <span class="sr-only">(current)</span></a></li>
+	            <li><a href="../navbar-fixed-top/">Fixed top</a></li>
+	          </ul> -->
+        </div><!--/.nav-collapse -->
+      </div>
+  </div>
+</nav>
+	<div id="container">
+		<div id="map"></div>
+	</div>
+	<!-- <div class="info-controls form-inline">
+		<h3>Show Count Data 
+			<button type="button" class="pull-right btn btn-default btn-xs filter" style="" disabled="disabled" id="clear-dates">clear</button>
+		</h3>
+		<p id="filter-statement">
+			Show me 
+			<select type="text" id="countType" class="form-control single filter" >
+				<option value="">all</option>
+				<option selected value="2">bike</option>
+				<option value="1">ped</option>
+			</select> 
+			data for 
+			<select class="form-control single filter" id="season">
+				<option value="">all</option>
+				<option value="0">Winter</option>
+				<option value="1">Spring</option>
+				<option value="2">Summer</option>
+				<option value="3">Fall</option>
+			</select>
+			days
+			<select class="form-control single filter" id="temp-comparison">
+				<option value="">with any weather</option>
+				<option value="#temp-min">warmer than</option>
+				<option value="#temp-max">cooler than</option>
+				<option value="">with rain</option>
+			</select>
+			<span id="temp-field" style="display:none;">
+			than 
+			<input style="width:55px" type="text" class="form-control single filter temp" id="temp" placeholder="90">
+			°F.
+			</span>
+			<button class="btn btn-default single filter has-spinner" id="go-button" type="button">
+				Go!
+			</button>
+			
+			<button class="pull-right btn btn-default btn-xs" id="collapse-button" style="width:20px; margin-top:10px;" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">+</button>
+		</p>
+		
+		<p id="main-alert" style="visibility:hidden;">Alert goes here.</p>
+		
+		<form id="collapseExample" class="collapse form-inline" style="">
+			<div class="form-group" style="" >
+				<select multiple class="form-control special filter" id="date"></select>
+				<select multiple class="form-control special filter" id="dow">
+					<option value="0">Sunday</option>
+					<option value="1">Monday</option>
+					<option value="2">Tuesday</option>
+					<option value="3">Wednesday</option>
+					<option value="4">Thursday</option>
+					<option value="5">Friday</option>
+					<option value="6">Saturday</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<select multiple class="form-control special filter" id="season">
+					<option value="0">Winter</option>
+					<option value="1">Spring</option>
+					<option value="2">Summer</option>
+					<option value="3">Fall</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<select multiple class="form-control special filter" id="weather">
+					<option value="rain">Rain</option>
+					<option value="thunder">Thunder</option>
+					<option value="snow">Snow</option>
+					<option value="fog">Fog</option>
+				</select>
+			</div>
+			<input style="width:55px" type="text" class="form-control special filter temp" id="temp" placeholder="90">
+			<div class="radio">
+			  <label>
+			    <input type="radio" name="tempRadios" class="special filter" id="temp-min" value="gte." checked>
+			    min
+			  </label>
+			</div>
+			<div class="radio">
+			  <label>
+			    <input type="radio" name="tempRadios" class="special filter" id="temp-max" value="lte.">
+			    max
+			  </label>
+			</div>
+			<input style="width:40px" id="scale-factor" data-slider-id='scale-factorSlider' type="text" data-slider-min="1" data-slider-max="10" data-slider-step="1" data-slider-value="5"/>
+		</form>
+	</div> -->
+		<!-- <div class="col-md-6" id="nope"></div> -->
 <script type="text/javascript">
-	var locations, counts, weather, chart;
+	Array.prototype.max = function() {
+	  return Math.max.apply(null, this);
+	};
+
+	Array.prototype.min = function() {
+	  return Math.min.apply(null, this);
+	};
+	var locations, counts, weather, technology, chart, currentData, chartData;
 	var weatherData = [];
+	var initialStroke = 'grey';
+	var highlightStroke = 'white';
 	var ePrev;
+	var filterMap = {
+		temp: 'maxtempi',
+		dow: 'dow',
+		date: 'count_date',
+		season: 'season',
+		countType: 'count_type',
+		station: 'station_id'
+	};
+	var technology = {
+				'V': {
+					color: '#1b9e77',
+					label: 'Video'
+				},
+				'H': {
+					color: '#d95f02',
+					label: 'Manual'
+				},
+				'R': {
+					color: '#7570b3',
+					label: 'Pneumatic'
+				},
+				'I': {
+					color: '#e7298a',
+					label: 'Infrared'
+				}
+			};
+	var opacities =  [
+			    	{
+			    		value:0.25,
+			    		label:5,
+			    		numCounts: []
+			    	},
+    				{
+    					value:0.5,
+    					label:20,
+    					numCounts: []
+    				},
+    				{
+    					value:0.75,
+    					label:35,
+    					numCounts: []
+    				},
+    				{
+    					value:0.9,
+    					label:50,
+    					numCounts: []
+    				},
+				];
+	var filterPrev;
+	var prevError = false;
 	var counters;
+	var strokeBool = true;
 	// Provide your access token
 	L.mapbox.accessToken = 'pk.eyJ1IjoiYXRscmVnaW9uYWwiLCJhIjoiQmZ6d2tyMCJ9.oENm3NSf--qHrimdm9Vvdw';
 	// Create a map in the div #map
 	var map = L.mapbox.map('map', 'atlregional.tm2-basemap');
-	map.on('popupclose', function(e) {
-		$('#chart').hide();
-		if(typeof ePrev !== 'undefined'){
-			ePrev.target.setStyle({fillColor:'blue'});
-		}
-	});
+
 	map.on('click', function(e) {
-		console.log(e);
-	});
-	// https://docs.google.com/spreadsheets/d/1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI/edit?usp=sharing
-	document.addEventListener('DOMContentLoaded', function() {
-        var URL = "1eKo4ssv5EKQRS25qfeXQqIJOjoiJ_-Cg1krMylsEIdI"
-        Tabletop.init( { key: URL, callback: showInfo } )
-        // Tabletop.init( { key: URL2, callback: shapesMap, simpleSheet: true } )
-        $('#submit-dates').on('click', function(e){
-        	var dateValues = $('#dates').val();
-        	console.log(dateValues);
-        	var visibleStations = [];
-        	for (var i = dateValues.length - 1; i >= 0; i--) {
-        		// var existingStations = visibleStations;
-        		console.log(visibleStations)
-        		console.log(dateValues[i])
-        		console.log(Object.keys(countsDates[dateValues[i]]))
-        		visibleStations.push.apply(visibleStations, Object.keys(countsDates[dateValues[i]]))
-        		// visibleStations = $.merge(Object.keys(countsDates[dateValues[i]]), visibleStations);
-        		// console.log(Object.keys(countsDates[dateValues[i]]))
-        		// console.log(counters.getLayers())
-        		var layers = counters.getLayers()
-        		for (var j = layers.length - 1; j >= 0; j--) {
-        			// console.log(layers[i].feature.opts.StationID);
-        			var id = layers[j].feature.opts.StationID;
-        			if (visibleStations.indexOf(id) === -1){
-        				layers[j].setStyle({fill: false, stroke: false});
-        			}
-        			else{
-        				layers[j].setStyle({fill: true, stroke: true});
-        				layers[j].setRadius(getCount(layers[j].feature, dateValues[i])/10, dateValues[i]);
-        			}
+		// console.log(e.originalEvent.target);
+		console.log($(e.originalEvent.target).attr('class'));
+		if ($(e.originalEvent.target).attr('class') === 'leaflet-zoom-animated'){
+			// $('#chart').hide();
+			info.update();
+			console.log(initialStroke)
+			resetPrevious();
 
-        		};
-        		// if (Object.keys(countsDates[dateValues[i]])){
-
-        		// }
-        	} // end for dateValues
-        	console.log(visibleStations);
-
-        }) // end submit click
-		$('#clear-dates').on('click', function(e){
-			var layers = counters.getLayers()
-        	for (var j = layers.length - 1; j >= 0; j--) {
-        		layers[j].setStyle({fill: true, stroke: true});
-        		layers[j].setRadius(10);
-        	}
-		});
-      }) // end DOMContentLoaded
-	function getCount(feature, date){
-		var total = 0
-		var countData = countsDates[date][feature.opts.StationID];
-		console.log(countData);
-		for (var i = 0; i < countData.length; i++) {
-			var sum = 0;
-			for (var key in countData[i]) {
-			// for (var j = countData.length - 1; i >= 0; i--) {
-			// 	countData[i]
-			// };
-			    if (countData[i].hasOwnProperty(key)) {
-			        // console.log(key)
-			        if (/CntIinterval/g.test(key)){
-			        	sum += +countData[i][key];
-			        }
-			    }
-			}
-			total += sum;
 		}
-		return total;
+		ePrev = null;
+	});
+	var legend = L.control({position: 'bottomright'});
+	var opacityLegend = L.control({position: 'bottomleft'});
+	var info = L.control();
+
+	info.onAdd = function (map) {
+	    this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+	    this.update();
+	    return this._div;
+	};
+
+	// method that we will use to update the control based on feature properties passed
+	info.update = function (props) {
+		// ePrev = null;
+		console.log(this);
+		if (typeof props !== 'undefined'){
+			this._div.style.width = '500px';
+			this._div.style.height = '500px';
+		}
+		else{
+			this._div.style.width = '167px';
+			this._div.style.height = '53px';
+		}
+	    this._div.innerHTML = '<h4>ARC Active Counts</h4>' +  (props ?
+	        // '<div class="form-group inline-form"><label for="direction-radio">Select direction</label><select class="form-control" style="width:100px" id="direction-radio"><option value="" selected>All</option><option value="1">1</option><option value="2">2</option></select></div>' +
+	        // '<button class="btn btn-default" id="drawChart" onclick="drawChart(chartData, \'means\')">Mean of directions</button>' +
+	        // '<button class="btn btn-default" id="drawChart" onclick="drawChart(chartData, \'totals\')">Sum of directions</button>' +
+	        '<div id="chart"></div>' +
+	        '<p><small>Weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground.com</small><img style="position:relative; bottom:16px;" src="wunderground.png" width="69" height="41"></a></p>'
+	        : 'Click a count location');
+	};
+	info.addTo(map);
+	document.addEventListener('DOMContentLoaded', function() {
+        initialize();
+        // $('#temp-comparison').on('change', function(e){
+        // 	console.log($(this));
+        // 	$($(this).val()).attr('checked', true);
+        // });
+		// $('#direction-radio').on('change', function(e){
+		// 	console.log(this.value);
+		// });
+		$('.modal').on('show.bs.modal', function() {
+			var chart = $('#chart').highcharts();
+		    $('#chart').css('visibility', 'hidden');
+		});
+		$('.modal').on('shown.bs.modal', function() {
+			var chart = $('#chart').highcharts();
+		    $('#chart').css('visibility', 'initial');
+		    chart.reflow();
+		});
+		$('#drawChart').click(function(e){
+			console.log('draw chart');
+		});
+        $("#temp-comparison").on('focus', function () {
+	        // Store the current value on focus and on change
+	        previous = this.value;
+	    }).change(function() {
+	        // Do something with the previous value after the change
+	        // alert(previous);
+	        $(previous).prop('checked', false);
+	        $(this.value).prop('checked', true);
+	        if (this.value === '#temp-min' || this.value === '#temp-max'){
+	        	$('#temp-field').show();
+	        }
+	        else{
+	        	$('#temp-field').hide();
+	        	$('#temp.single').val('');
+	        }
+	        // Make sure the previous value is updated
+	        // previous = this.value;
+	    });
+	    $('input[type=radio][name=tempRadios]').on('click', function() {
+			if (this.id === 'temp-max') {
+				console.log(this.id);
+				// bind radio button value to temp-comparison checkbox
+				$('#temp-comparison option[value="#temp-max"]').prop('selected', true);
+			}
+			else if (this.id === 'temp-min') {
+				$('#temp-comparison option[value="#temp-min"]').prop('selected', true);
+			}
+		});
+        $('.special').on('change keyup', function(e){
+        	console.log('clearing single');
+        	$('#temp.single').val('');
+        	$(".single option:selected").removeAttr("selected");
+        });
+        $('.single').on('change keyup', function(e){
+        	console.log('clearing special');
+        	$('#temp.special').val('');
+        	$(".special option:selected").removeAttr("selected");
+        });
+        // Instantiate a slider
+		$('#scale-factor').slider({
+          	formatter: function(value) {
+            	return 'Radius size: ' + value;
+          	}
+        })
+		.on('change', function(e){ 
+			console.log(e.value.newValue);
+			var layers = counters.getLayers();
+			var oldValue = e.value.oldValue;
+			var newValue = e.value.newValue;
+			for (var i = layers.length - 1; i >= 0; i--) {
+				var oldRadius = layers[i].getRadius();
+				layers[i].setRadius(oldRadius / oldValue * newValue);
+			};
+				
+				
+			});
+        $('.filter').on('keyup change', function(e){
+        	$('#main-alert').css('visibility','hidden');
+        	if (this.id === 'dow' || this.id === 'season'){
+	    		$("#date option:selected").removeAttr("selected");
+	    	}	
+	    	else if (this.id === 'date'){
+	    		$("#dow option:selected").removeAttr("selected");
+	    		$("#season.special option:selected").removeAttr("selected");
+	    	}
+        	var filters = getFilters();
+        	var filterVal = $(this).val();
+        	console.log(filters)
+        	console.log(filterPrev)
+        	console.log(_.isEqual(filters, filterPrev));
+        	if (e.type === 'keyup' ){
+	    		if (this.id !== 'temp'){
+	    			console.log('keyup = no change');
+	    			return;
+	    		}
+	    		console.log(filterVal);
+	    		if (this.id === 'temp' && filterVal.length < 2){
+	    			return;
+	    		}
+	    		else{
+
+	    		}
+	    		
+	    	}
+	    	else {
+	    		if (this.id === 'temp'){
+	    			console.log('temp not changed');
+	    			return;
+	    		}
+	    	}
+        	if (typeof filterPrev === 'undefined' || !_.isEqual(filters, filterPrev)){
+        		filterPrev = filters;
+        		filterData(this, filters, e);
+        	}
+        	else{
+        		console.log('filters have not changed');
+        		filterPrev = filters;
+        		if (prevError){
+        			showFilterError(filters);
+        			// clearFilter();
+        		}
+        	}
+    		
+        }); // end .filter change
+        $('#go-button').on('click', function(e){
+        	var filters = getFilters();
+        	console.log(filters);
+        	console.log(filterPrev);
+        	console.log(_.isEqual(filters, filterPrev));
+        	// if (typeof filterPrev === 'undefined' || !_.isEqual(filters, filterPrev)){
+        		filterPrev = filters;
+        		filterData(this, filters, e);
+        		
+        	// }
+        	// else{
+        	// 	console.log('filters have not changed');
+        	// 	filterPrev = filters;
+        	// 	if (prevError){
+        	// 		showFilterError(filters);
+        	// 		// clearFilter();
+        	// 	}
+        	// }
+    		
+        }); // end .go-button click
+        $('#collapse-button').on('click', function(e){
+        	var $this = $(this);
+        	if ($this.html() === '+'){
+        		$this.html('-');
+        		$('#collapse-button').addClass('active');
+        	}
+        	else{
+        		$this.html('+');
+        		$('#collapse-button').removeClass('active');
+        	}
+    		
+        }); // end .go-button click
+		$('#clear-dates').on('click', function(e){
+			// clearFilter('dates');
+			// clearFilter('dow');
+			clearFilter();
+		});
+      }); // end DOMContentLoaded
+	function getFilters(){
+		var filters;
+		$('.filter').each(function(i, obj) {
+    		// console.log(obj.id)
+    		var value = $(obj).val();
+    		// $('#' + obj.id).val(value);
+    		if (obj.id === 'temp-comparison'){
+    			return true;
+    		}
+    		else if (obj.id === 'temp-min' || obj.id === 'temp-max'){
+    			if ($('#temp.single').val() !== '' || $('#temp.special').val() !== ''){
+    				if (typeof filters === 'undefined'){
+	    				filters = {};
+	    			}
+			    	filters['temp-comp'] = $('input[name="tempRadios"]:checked').val();
+	    		}
+	    		else{
+	    			return true;
+	    		}
+    		}
+    		if (value !== null && value !== ""){
+    			if (typeof filters === 'undefined'){
+    				filters = {};
+    			}
+		    	filters[obj.id] = value;
+    		}
+		});
+		// console.log(filters);
+		if (typeof filters !== 'undefined' && typeof filters.season !== 'undefined' && typeof filters.season !== 'object'){
+			filters.season = [filters.season];
+		}
+		return filters;
+	}
+	function filterData($this, filters, e){
+		strokeBool = false;
+		console.log(e);
+    	// console.log($this.id)
+    	var filterClass;
+    	if ( $($this).hasClass('single') === true ){
+    		filterClass = 'single';
+    	}
+    	else{
+    		filterClass = 'special'
+    	}
+    	console.log(filterClass);
+    	
+		console.log(filters);
+    	$('#clear-dates').removeAttr('disabled');
+    	console.log(e.target.id);
+    	// var filterType = e.target.id;
+    	// var filterValues = $('#'+filterType).val();
+    	// console.log(filterValues);
+    	var layers = counters.getLayers();
+    	// var filterKey;
+    	var params;
+    	var paramsString = '';
+    	var seasonDates = [];
+    	var url = "http://192.168.1.68:3000/count_sum_weather?";
+    	// var visibleStations = [];
+    	// if (typeof filters !== 'undefined' || $this.id === 'go-button'){
+    		if (typeof filters !== 'undefined'){
+        		params = getParams(filters);
+        		paramsString = serialize(params);
+        	}
+        	else{
+        		filters = {};
+        		filters.station = '';
+        	}
+    		$.ajax({ 
+    			url: url + paramsString,
+    			beforeSend: function(){
+    				$('#loading').css({opacity: 1.0, visibility: "visible"});
+    				$('#go-button').button('loading');
+    				// $('#go-button').toggleClass('active');
+    			},
+    			complete: function(){
+    				$('#loading').fadeTo(200, 0);
+    				$('#go-button').button('reset');
+    				// $('#go-button').delay(1000).toggleClass('active');
+    			},
+    			success: function(json) {
+	    			console.log(json);
+	    			console.log(filters);
+					var rollup = d3.nest()
+						.key(function(d) { return d.station_id; })
+						.rollup(function(d){
+							return {
+								sum_count: d3.sum(d,function(g) {
+									return g.total_count;
+								}),
+								num_count: d.length,
+								dates: _.uniq(_.pluck(d, 'count_date')),
+								dirs: _.uniq(_.pluck(d, 'direction_of_travel'))
+							};
+						})
+						.map(json);
+					console.log(rollup);
+					var maxNum = _.max(rollup, function(chr) {
+								  return chr.num_count;
+								});
+					for (var j = layers.length - 1; j >= 0; j--) {
+	        			var tooltip = layers[j]._tooltip;
+	        			var id = layers[j].feature.properties.id;
+	        			var opacityValue = 0.4; 
+
+	        			// If station does not have data for filter query, do not show it.
+	        			if (typeof rollup[id] === 'undefined'){
+	        				layers[j].setStyle({fill: false, stroke: false});
+	        			}
+	        			else{
+	        				opacityValue = getOpacity(rollup[id].dates.length);
+	        				var averageCount = (rollup[id].sum_count / rollup[id].dates.length / rollup[id].dirs.length).toFixed(2);
+	        				tooltip.setHtml(
+	        					'<p><strong>' + id + '</strong></p>' +
+	        					'<p>Average daily: ' + averageCount + '</p>' +
+	        					'<p>Days of counting: ' + rollup[id].dates.length + '</p>' +
+	        					'<p>Directions counted: ' + rollup[id].dirs.length + '</p>' 
+	        				);
+	        				var newCount = averageCount;
+	        				var currentOpacity = 0.0;
+
+	        				// If station is currently highlighted, keep it highlighted.
+	        				if (typeof ePrev !== 'undefined' && ePrev !== null && ePrev.target.feature.properties.id == id){
+	        					currentOpacity = 1.0
+	        					console.log(id + ' highligh');
+	        				}
+	        				layers[j].setStyle({
+	        					fill: true, 
+	        					stroke: true,
+	        					fillOpacity: opacityValue,
+	        					// color: 'blue',
+	        					opacity: currentOpacity
+	        				});
+	        				var scaleFactor = $('#scale-factor').slider('getValue');
+	        				var radius = newCount * scaleFactor / 20;
+	        				layers[j].setRadius(radius);
+	        			}
+
+	        		} // end for layers iteration
+				} // end success
+    		}); // end get JSON
+
+		// If station was previously selected, get data for single station.
+		if (ePrev !== null){
+			getStationData(ePrev);
+		}
+	}
+	function getOpacity(numCount){
+		for (var i = 0; i < opacities.length; i++) {
+			if (numCount < opacities[i].label){
+				// console.log(opacities[i].label);
+				// console.log(opacities[i].value);
+				return opacities[i].value;
+			}
+		}
+	}
+	function resetPrevious(){
+		if(typeof ePrev !== 'undefined' && ePrev !== null){
+			ePrev.target.setStyle({
+				fillColor: technology[ePrev.target.feature.properties.sensor_type].color,
+				color: initialStroke,
+				stroke: strokeBool
+			});
+			ePrev = null;
+		}
+	}
+	function adjustFilters(filters){
+		if (filterType === 'date'){
+			currentValue = moment(+filterValues[i]).format('YYYY-MM-DD');
+			// console.log(moment(+filterValues[i]).format('YYYY-MM-DD'));
+		}
+		else if (filterType === 'season' || filterType === 'temp' || filterType === 'dow'){
+			currentValue = +filterValues[i];
+		}
+		else{
+			currentValue = filterValues[i];
+		}
+		return filters;
+	}
+	function createNestingFunction(propertyName, propertyValues, propertyMap){
+		console.log(propertyValues);
+		// console.log()
+		return function(d){ 
+			
+			// console.log(d[propertyMap[propertyName]]);
+			// if ( propertyValues.indexOf(d[propertyMap[propertyName]]) > -1){
+			// if (_.some(propertyValues, d[propertyMap[propertyName]])){
+				// console.log(true);
+				return d[propertyMap[propertyName]];
+			// }
+		};
+	}
+	function resetMarkers(){
+		strokeBool = true;
+		var layers = counters.getLayers();
+    	for (var j = layers.length - 1; j >= 0; j--) {
+    		resetMarker(layers[j]);
+
+    	}
+	}
+	function resetMarker(marker){
+		marker.setStyle({
+			fill: true,
+    		stroke: strokeBool,
+    		fillOpacity: 1.0,
+    		opacity: 1.0
+		});
+		marker.setRadius(3);
+		marker._tooltip.setHtml(marker.feature.properties.id);
+	}
+	function clearFilter(filter){
+		if (typeof filter === 'undefined'){
+			$('#scale-factor').slider('setValue', 5, true, true);
+			$('#clear-dates').attr('disabled', 'disabled');
+			$(".filter option:selected").removeAttr("selected");
+			$('#temp-min').attr('checked', true);
+			$(".temp").val("");
+			resetMarkers();
+		}
+		$("#" + filter + " option:selected").removeAttr("selected");
+		filterPrev = undefined;
+		resetPrevious();
+		info.update();
+	}
+	function showFilterError(filters){
+		var errorString = '<small><em>';
+		var errorStringArray = [];
+		$.each(filters, function(filterType, filterValues){
+			var value;
+			var valueText = '';
+			if (filterType === 'countType' || filterType === 'season'){
+				valueText = $("#" + filterType + ".single option[value='" + filterValues + "']").text();
+			}
+			else if (filterType === 'dow' || filterType === 'date'){
+				valueText = $("#" + filterType + ".special option[value='" + filterValues + "']").text();
+			}
+			else if (filterType === 'temp'){
+				valueText = $("#" + filterType + '.single').val();
+			}
+			console.log(valueText);
+			errorStringArray.push(filterType + ': ' + valueText);
+		});
+		errorString += errorStringArray.join('; ') + '</em></small>';
+		$('#main-alert').html('<strong>Sorry!</strong> No data found for filters: ' + errorString).css({opacity: 1.0, visibility: "visible"}).delay(1000).fadeTo(2000, 0);
+		resetMarkers();
+	}
+	function formatDate(val){return moment(+val).format('YYYY-MM-DD');}
+	function getParams(filters){
+		var params = {};
+		if(typeof filters === 'undefined'){
+			return false;
+		}
+		else{
+			if (typeof filters.date !== 'undefined'){
+	    		params.count_date = "in." + _.map(filters.date, formatDate);
+			}
+			if (typeof filters.dow !== 'undefined'){
+				params.dow = "in." + filters.dow;
+			}
+			if (typeof filters.temp !== 'undefined'){
+				params.maxtempi = $('input[name="tempRadios"]:checked').val() + filters.temp;
+				// filterKey = 'maxtempi';
+			}
+			if (typeof filters.countType !== 'undefined'){
+				params.count_type = 'eq.' + filters.countType;
+				// filterKey = 'maxtempi';
+			}
+			if(typeof filters.season !== 'undefined'){
+				params.season = "in." + filters.season;
+			}
+			if(typeof filters.weather !== 'undefined'){
+				for (var i = filters.weather.length - 1; i >= 0; i--) {
+					params[filters.weather[i]] = 'eq.' + '1';
+				};
+				// params.weather = "in." + filters.weather;
+			}
+			return params;
+		}
+		
+	}
+	// function getCount(countData, filterValue, filterKey, dailyAverage){
+	// 	if (typeof dailyAverage === 'undefined'){
+	// 		dailyAverage = true;
+	// 	}
+	// 	// console.log('getCount called');
+	// 	var total = 0;
+	// 	var count = 0;
+	// 	var dates = [];
+	// 	var directions = [];
+	// 	// var countData = countsDates[date][feature.properties.id];
+	// 	// console.log(countData);
+	// 	if (typeof countData !== 'undefined'){
+	// 		for (var i = 0; i < countData.length; i++) {
+	// 			// console.log(typeof filterValue)
+	// 			// console.log( filterValue)
+	// 			// console.log(typeof countData[i][filterKey]);
+	// 			var sum = 0;
+	// 			if(
+	// 				countData[i][filterKey] === filterValue && 
+	// 				// countData[i].count_data.length > 0
+	// 				countData[i].total_count > 0
+	// 			){
+	// 				// console.log(countData[i].count_date);
+	// 				total += countData[i].total_count;
+	// 				// total += countData[i].count_data.reduce(function(pv, cv) { return pv + cv; }, 0);
+	// 				if (dates.indexOf(countData[i].count_date) > -1){
+	// 					// do nothing to count
+	// 				}
+	// 				else{
+	// 					dates.push(countData[i].count_date);
+	// 					count++;	
+	// 				}
+	// 				if (directions.indexOf(countData[i].direction_of_travel) > -1){
+	// 					// do nothing to count
+	// 				}
+	// 				else{
+	// 					directions.push(countData[i].direction_of_travel);
+	// 					count++;
+	// 				}
+	// 				// console.log(count);
+	// 			}
+	// 		}
+	// 	}
+	// 	// console.log(dates);
+	// 	if (dailyAverage){
+	// 		total = total/count;
+	// 	}
+	// 	// console.log(total);
+	// 	return count ? total : 0;
+	// }
+	function drawMarker(feature, value, factor){
+		feature.setRadius(value, factor);
 	}
 	function getStationData(e){
-		$('#weather').empty();
+		// $('#weather').empty();
+		resetPrevious();
 		var count = e.target.feature;
-		var id = e.target.feature.opts.StationID;
-		e.target.setStyle({fillColor:'red'});
+		var id = e.target.feature.properties.id;
+		info.update(e.target.feature.properties);
+		e.target.setStyle({opacity:1.0, color: highlightStroke, stroke: true});
 		var content = [];
 		var description = '';
 		var dates = [];
 		var rains = [];
 		var temps = [];
-		var total = 0;
+		var weather;
+		// var total = 0;
 		var totals = [];
-		var countData = counts[id];
-		for (var i = 0; i < countData.length; i++) {
-			console.log(countData[i]);
-			var date = countData[i].DateClean;
+		var weekdays = [];
+		var weekends = [];
+		var means = [];
+		d3.json("http://192.168.1.68:3000/count_sum_weather?station_id=eq." + id, function(error, json) {
+			var s = $('<select id="dir-radio" name="selectName" />');
+			// $('#direction-radio').html();
+			// $('#direction-radio option[value="' +  + '"]').prop('selected', true)
 
-			total = getCount(count, date);
-			
-			var minutes = countData[i].CntStartTime.substr(countData[i].CntStartTime.length - 2)
-			var hours = countData[i].CntStartTime.length === 4 ? countData[i].CntStartTime.substr(0,2) : countData[i].CntStartTime.substr(0, 1);
-			var dateTime = moment(date + ' ' + hours + ':' + minutes, "YYYYMMDD H:mm");
-			console.log(dateTime.format());
-			console.log(minutes);
-			console.log(e.target.feature);
-			if (i === 0){
-				// $('#weather').append('<h4>' + countData[i].Description + '</h4>');
-				description = countData[i].Description;
-			}
-			else if (i === countData.length - 1){
-				// $('#weather').append('<p>'+date+' count: ' + total + '</p>');
-			}
-			content.push(dateTime.format("dddd, MMMM Do YYYY, h:mm:ss a"));
-			console.log(content);
-			
-			if (!(dates.indexOf(date) > -1) ){
-				// Get weather for unique days
-				// $.getJSON('http://api.wunderground.com/api/4fa8163ffde1665b/history_'+date+'/q/GA/Atlanta.json', function(data){
-				// 	console.log(date)
-				// 	weatherData.push(data);
-				// 	console.log(data.history.dailysummary[0]);
-				// 	var weather = data.history.dailysummary[0];
-				// 	var maxTemp = weather.maxtempi;
-				// 	var minTemp = weather.mintempi;
-				// 	var precip = weather.precipi;
-				// 	var wind = weather.wspdi;
-				// 	var snow = weather.snow;
-				// 	var thunder = weather.thunder;
-				// 	console.log(i);
-				// 	// $('#weather').append(formatWeather(weather));
-				// 	rains.push(precip);
-				// 	temps.push(maxTemp);
-				// })
+			var directions = _.uniq(_.pluck(json, 'direction_of_travel'));
+			console.log(directions);
+			var countData = json;
+			var rollup = d3.nest()
+				.key(function(d) { return d.count_date; })
+				.sortKeys(d3.ascending)
+				.rollup(function(d){
+					return {
+						sum_count: d3.sum(d,function(g) {
+							return g.total_count;
+						}),
+						mean_count: d3.mean(d,function(g) {
+							return g.total_count;
+						}),
+						dir_1: d3.sum(d,function(g) {
+							if (g.direction_of_travel === 1)
+								return g.total_count;
+						}),
+						dir_2: d3.sum(d,function(g) {
+							if (g.direction_of_travel === 2)
+								return g.total_count;
+						}),
+						num_count: d.length,
+						// dates: _.uniq(_.pluck(d, 'count_date')),
+						dirs: _.uniq(_.pluck(d, 'direction_of_travel')),
+						temp: d3.mean(d,function(g) {
+							return g.maxtempi;
+						}),
+						precip: d3.mean(d,function(g) {
+							return g.precipi;
+						}),
+						dow: d3.mean(d,function(g) {
+							return g.dow;
+						}),
+						season: d3.mean(d,function(g) {
+							return g.season;
+						}),
+						rain: d3.mean(d,function(g) {
+							return g.rain;
+						}),
+						thunder: d3.mean(d,function(g) {
+							return g.thunder;
+						}),
+						fog: d3.mean(d,function(g) {
+							return g.fog;
+						}),
+						snow: d3.mean(d,function(g) {
+							return g.snow;
+						}),
+						countType: d3.mean(d,function(g) {
+							return g.count_type;
+						})
+					};
+				})
+				// .key(function(d) { return d.count_type; })
+				.entries(json);
+			console.log(rollup);
+			console.log(countData);
+			$.each(rollup, function(i, date){
+				// console.log(i);
+				// console.log(date.values.dow);
+				var dateValue = +moment(date.key).utc();
+				var total = date.values.sum_count;
+				if (i === 0){
+					// $('#weather').append('<h4>' + countData[i].Description + '</h4>');
+					description = countData[0].description;
+				}
+				if (!(dates.indexOf(date.key) > -1) ){
+					var precipValue = isNaN(+date.values.precip) ? 0.001 : +date.values.precip;
+					rains.push([dateValue, precipValue]);
+					temps.push([dateValue, +date.values.temp]);
+					// Only add date/total count is it's a new value
+					dates.push(date.key);
+					var borderColorValue = 'white';
+					var colorValue = '#7cb5ec'
+					
+					
+					var totalObject = {
+						y: total,
+						x: dateValue,
+						// borderColor: borderColorValue,
+						// color: colorValue
+					};
+					if (checkFilter(date)){
+						totalObject.colorValue = 'yellow';
+					}
+					else{
+						totalObject.dashStyle = 'longdash';
+						totalObject.color = 'rgba(255, 255, 255, 0.00)';
+						totalObject.borderColor = 'grey';
+					}
+					// if (date.values.dow)
+					if (date.values.dow === 0 || date.values.dow === 6){
+						// totalObject.borderColor = 'blue';
+						// totalObject.color = 'pink';
+						weekends.push(totalObject);
+					}
+					else{
+						weekdays.push(totalObject);
+					}
+					totals.push(totalObject);	
+					means.push({
+						y: date.values.mean_count,
+						borderColor: borderColorValue,
+						color: colorValue
+					});			
+				}
+			});
+			chartData = {
+				description: description,
+				totals: {
+					totals: totals,
+					means: means
+				},
+				weekends: weekends,
+				weekdays: weekdays,
+				dates: dates,
+				rains: rains,
+				temps: temps
+			};
+			drawChart(chartData, 'totals');
+			console.log(chartData);
 
-				// Only add date/total count is it's a new value
-				dates.push(date);
-				totals.push(total);
-				rains.push(+weather[date][0].Precipitation);
-				temps.push(+weather[date][0].MaxTemp);
-				
-			}
-			
-			console.log(dates);
-			// var svg = d3.select("body").append("svg").attr("width", 100).attr("height", 100);
-
-			// var rect = svg.append("rect").attr("x", 40).attr("y", 40).attr("height", total).attr("width", 10);
-
-			// rect.on("click", function() {
-			//     console.log("rect");
-			// });
-			// svg.on("click", function() { console.log("svg"); });
-		};
-		console.log(total);
-		drawChart(description, totals, dates, rains, temps);
-		ePrev = e;
-
+			ePrev = e;
+			currentData = rollup;
+		});
+		$('.modal').modal();
 	}
-	function formatWeather(weather){
-		var weatherString = weather.date.pretty.split(' on ')[1] + '<br />';
-		if (+weather.thunder){
-			weatherString += '<i class="wi wi-lightning"></i>'
+	serialize = function(obj) {
+	  var str = [];
+	  for(var p in obj)
+	    if (obj.hasOwnProperty(p)) {
+	      str.push(encodeURIComponent(p) + "=" + obj[p]);
+	    }
+	  return str.join("&");
+	};
+	// function formatWeather(weather){
+	// 	var weatherString = weather.date.pretty.split(' on ')[1] + '<br />';
+	// 	if (+weather.thunder){
+	// 		weatherString += '<i class="wi wi-lightning"></i>'
+	// 	}
+	// 	else if (+weather.snow) {
+	// 		weatherString += '<i class="wi wi-snow"></i>'
+	// 	}
+	// 	else if (+weather.rain) {
+	// 		weatherString += '<i class="wi wi-rain"></i>'
+	// 	}
+	// 	else if (+weather.maxwspdi > 24){
+	// 		weatherString += '<i class="wi wi-cloudy-gusts"></i>'
+	// 	}
+	// 	else {
+	// 		weatherString += '<i class="wi wi-day-sunny"></i>'
+	// 	}
+	// 	return 	weatherString + 
+	// 			'<p>hi: ' + weather.maxtempi + '</p><p>low: ' + weather.mintempi + '</p>' + 
+	// 			'<p><small>weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground</a></small><img src="wunderground.png" width="276" height="165"></p>'
+	// }
+	function checkFilter(count){
+		var check = [true];
+		if (typeof filterPrev !== 'undefined'){
+			if (typeof filterPrev.temp !== 'undefined' ){
+				if ( $('input[name="tempRadios"]:checked').val() === 'gte.'){
+					if (count.values.temp >= filterPrev.temp){
+						check.push(true);
+					}
+					else{
+						check.push(false);
+					}
+				}
+				else if ($('input[name="tempRadios"]:checked').val() === 'lte.'){
+					if (count.values.temp < filterPrev.temp){
+						check.push(true);
+					}
+					else{
+						check.push(false);
+					}
+				}
+			}
+			if (typeof filterPrev.dow !== 'undefined' ){
+				if ( _.indexOf(filterPrev.dow, count.values.dow.toString()) > -1 ){
+					check.push(true);
+				}
+				else{
+					check.push(false);
+				}
+			}
+			// if (typeof filterPrev.countType !== 'undefined' ){
+			// 	if ( _.indexOf(filterPrev.countType, count.values.countType.toString()) > -1 ){
+			// 		check.push(true);
+			// 	}
+			// }
+			if (typeof filterPrev.season !== 'undefined' ){
+				if ( _.indexOf(filterPrev.season, count.values.season.toString()) > -1 ){
+					check.push(true);
+				}
+				else{
+					check.push(false);
+				}
+			}
+			if (typeof filterPrev.date !== 'undefined' ){
+				if ( _.indexOf(filterPrev.date, moment(count.key).valueOf().toString()) > -1 ){
+					check.push(true);
+				}
+				else{
+					check.push(false);
+				}
+			}
+			if (typeof filterPrev.weather !== 'undefined' ){
+				if ( count.values[filterPrev.weather[0]] ===  1){
+					check.push(true);
+				}
+				else{
+					check.push(false);
+				}
+			}
 		}
-		else if (+weather.snow) {
-			weatherString += '<i class="wi wi-snow"></i>'
+		if (_.indexOf(check, false) > -1){
+			return false;
 		}
-		else if (+weather.rain) {
-			weatherString += '<i class="wi wi-rain"></i>'
+		else{
+			return true;
 		}
-		else if (+weather.maxwspdi > 24){
-			weatherString += '<i class="wi wi-cloudy-gusts"></i>'
-		}
-		else {
-			weatherString += '<i class="wi wi-day-sunny"></i>'
-		}
-		return 	weatherString + 
-				'<p>hi: ' + weather.maxtempi + '</p><p>low: ' + weather.mintempi + '</p>' +
-				'<p><small>weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground</a></small></p>'
 	}
-
-	function drawChart(description, totals, dates, rains, temps){
-		console.log(rains);
-		$('#chart').show();
+	function drawChart(data, type){
+		console.log(type);
+		console.log(data.totals);
+		console.log(data.rains);
+		console.log(data.temps);
+		// $('#chart').show();
+		Highcharts.seriesTypes.bar.prototype.pointAttrToOptions.dashstyle = 'dashStyle';
 		$(function () {
 		    chart = $('#chart').highcharts({
 		        chart: {
-		            zoomType: 'xy'
+		            zoomType: 'x',
+		            backgroundColor: 'rgba(255, 255, 255, 0.0)'
 		        },
+		        "plotOptions": { 
+			        "column": { "stacking": "normal" } 
+			    },
 		        title: {
-		            text: description
+		            text: data.description
 		        },
 		        subtitle: {
 		            text: 'Source: Atlanta Regional Commission'
 		        },
 		        xAxis: [{
-		            categories: dates,
-		            crosshair: true
+		            type: 'datetime',
+		            dateTimeLabelFormats: {
+		                day: '%e %b %y'
+		            },
+		            // crosshair: true
 		        }],
 		        yAxis: [{ // Primary yAxis
 		            labels: {
@@ -271,11 +1289,29 @@
 		                }
 		            },
 		            min: 0,
-		            opposite: true
+		            max: 100,
+		            tickInterval: 25,
+		            tickAmount: 5,
+		            endOnTick: true,
+		            opposite: true,
+		            plotLines: [{
+			            color: '#90ed7d',
+			            width: 1,
+			            value: 32, // Freezing.
+			            dashStyle: 'dash',
+			            label: {
+		                    text: '32°F',
+		                    align: 'right',
+		                    style: {
+		                    	fontSize: 'x-small'
+		                    },
+		                    y: -4,
+		                    x: 0
+		                }
+			        }]
 
 		        }, { // Secondary yAxis
 		            gridLineWidth: 0,
-		            min: 0,
 		            title: {
 		                text: 'Count',
 		                style: {
@@ -287,7 +1323,10 @@
 		                style: {
 		                    color: Highcharts.getOptions().colors[0]
 		                }
-		            }
+		            },
+		            min: 0,
+		            tickAmount: 5,
+		            // tickInterval: 250
 
 		        }, { // Tertiary yAxis
 		            gridLineWidth: 0,
@@ -304,6 +1343,8 @@
 		                }
 		            },
 		            min: 0,
+		            tickInterval: 1,
+		            tickAmount: 5,
 		            opposite: true
 		        }],
 		        tooltip: {
@@ -319,19 +1360,41 @@
 		        //     backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
 		        // },
 		        series: [{
-		            name: 'Count',
+		            name: 'Weekdays',
 		            type: 'column',
 		            yAxis: 1,
-		            data: totals,
+		            data: data.weekdays,
 		            tooltip: {
 		                valueSuffix: ' cyclists'
 		            }
 
-		        }, {
+		        }, 
+				{
+		            name: 'Weekends',
+		            type: 'column',
+		            yAxis: 1,
+		            color: 'pink',
+		            data: data.weekends,
+		            tooltip: {
+		                valueSuffix: ' cyclists'
+		            }
+
+		        }, 
+		        // {
+		        //     name: 'Weekend',
+		        //     type: 'column',
+		        //     yAxis: 1,
+		        //     data: [500],
+		        //     tooltip: {
+		        //         valueSuffix: ' cyclists'
+		        //     }
+
+		        // },
+		        {
 		            name: 'Rainfall',
 		            type: 'spline',
 		            yAxis: 2,
-		            data: rains,
+		            data: data.rains,
 		            marker: {
 		                enabled: false
 		            },
@@ -340,10 +1403,12 @@
 		                valueSuffix: ' inches'
 		            }
 
-		        }, {
+		        }, 
+
+		        {
 		            name: 'Temperature',
 		            type: 'spline',
-		            data: temps,
+		            data: data.temps,
 		            tooltip: {
 		                valueSuffix: ' °F'
 		            }
@@ -353,69 +1418,127 @@
 
 
 	}
-	function showInfo(data) {
-		console.log(data);
-		locations = data.Locations;
-		weather = d3.nest()
-    		.key(function(d) { return d.DateClean; })
-    		.map(data.Weather.elements);;
-		counts = d3.nest()
-    		.key(function(d) { return d.StationID; })
-    		.map(data.Counts.elements);
-    	countsDates = d3.nest()
-    		.key(function(d) { return d.DateClean; })
-    		.key(function(d) { return d.StationID; })
-    		.map(data.Counts.elements);
-    	countIntervals = d3.nest()
-    		.key(function(d) { return d.StationID; })
-    		.key(function(d) { return d.CntInterval; })
-    		.map(data.Counts.elements);
-    	console.log(countsDates);
-    	var dates = Object.keys(countsDates).sort();
-    	for (var i = 0; i < dates.length; i++) {
-    		$('#dates').append('<option>' + dates[i] + '</option>');
-    	};
-		var optionsJSON = ["Description", "Technology", "CntIinterval1", "YrCount","MoCount","DayCount"]
-		var template = "<ul>"
-		             + "<li>{{Technology}}</li>"
-		             + "<li>Count = {{CntIinterval1}}</li>"
-		             + "<li><h4>{{Description}}</h4></li></ul>";
-		// var geo = createGeoJSON(data, optionsJSON);
-		// for (var i = data.length - 1; i >= 0; i--) {
-		// 	console.log(data[i]);
-		// };
-		var geoJSON = Sheetsee.createGeoJSON(locations.elements);
-		console.log(geoJSON);
-		// var marker = L.marker([33, -86]).addTo(map);
-		var stations = [];
-		counters = L.geoJson(geoJSON, {
-			pointToLayer: function(feature, latlng) {
-		        return L.circleMarker(latlng, {
-		            // Here we use the `count` property in GeoJSON verbatim: if it's
-		            // to small or two large, we can use basic math in Javascript to
-		            // adjust it so that it fits the map better.
-		            radius: 10
-		        })
-		    },
-			onEachFeature: function(feature, layer){
-				layer.bindPopup("<strong>StationID:</strong> " + feature.opts.StationID
-					// +"<br />"
-		   //           + "Count = "+feature.opts.CntIinterval1+"<br />"
-		   //           + "<strong>"+feature.opts.Description+"</strong>"
-		        );
-				layer.on({
-					click: getStationData
-				});
-				stations.push(feature.opts.StationID);
-			}
-		}).addTo(map);
-		console.log(counters);
-		map.fitBounds(counters.getBounds());
-		// var map = Sheetsee.loadMap("map")
-		// Sheetsee.addTileLayer(map, 'mapbox.streets')
-		// Sheetsee.addMarkerLayer(geoJSON, map, template)
+	function initialize() {
+		d3.json("http://192.168.1.68:3000/date?count_date=isnot.null&order=count_date.asc", function(error, json) {
+			var dates = json;
+	    	for (var i = 0; i < dates.length; i++) {
+	    		$('#date').append('<option value="'+moment(dates[i].count_date).valueOf()+'"">' + dates[i].count_date + '</option>');
+	    	};
+		});
 
-		// http://api.wunderground.com/api/4fa8163ffde1665b/history_20060405/q/GA/Atlanta.json
+		d3.json("http://192.168.1.68:3000/count_location", function(error, json) {
+		  if (error) return console.warn(error);
+		  var geoJSON = {
+			  "type": "FeatureCollection",
+			  "features": [
+			  ]
+			};
+		  data = json;
+		  for (var i = data.length - 1; i >= 0; i--) {
+		  	if (data[i].latitude && data[i].longitude){
+		  		var point = {
+				      type: "Feature",
+				      properties: data[i],
+				      geometry: {
+				        type: "Point",
+				        coordinates: [
+				          +data[i].longitude,
+				          +data[i].latitude
+				        ]
+				      }
+				    };
+				geoJSON.features.push(point);
+		  	}
+		  	
+		  };
+		  console.log(geoJSON);
+		  // visualizeit();
+
+			console.log(data);
+
+			var stations = [];
+			counters = L.geoJson(geoJSON, {
+				pointToLayer: function(feature, latlng) {
+					var color = typeof technology !== 'undefined' ? technology[feature.properties.sensor_type].color : 'blue';
+					console.log(color);
+			        return L.circleMarker(latlng, {
+			            // Here we use the `count` property in GeoJSON verbatim: if it's
+			            // to small or two large, we can use basic math in Javascript to
+			            // adjust it so that it fits the map better.
+			            radius: 5,
+			            fillColor: color,
+			            color: initialStroke,
+			            fillOpacity: 1.0,
+			            opacity: 1.0,
+			            tooltip: {
+					        html: feature.properties.id,
+					        showDelay: 0,
+					        hideDelay: 0
+					    }
+			        })
+			    },
+				onEachFeature: function(feature, layer){
+					// layer.bindPopup(
+					// 	"<strong>station_id:</strong> " + feature.properties.id
+			  //       );
+					layer.on({
+						click: getStationData
+					});
+					stations.push(feature.properties.id);
+
+				}
+			}).addTo(map);
+			console.log(counters);
+			map.fitBounds(counters.getBounds());
+			legend.onAdd = function (map) {
+
+				var div = L.DomUtil.create('div', 'info legend row');
+				var innerDiv = $('')
+				// div.style.width ='400px';
+				// div.innerHTML += '<div style="width:200px;">';
+				div.innerHTML += '<h4>Counter technology</h4>';
+
+				var tech = Object.keys(technology);
+
+			    for (var i = 0; i < tech.length; i++) {
+			        div.innerHTML +=
+			            '<i class="circle" style="background:' + technology[tech[i]].color + '"></i> ' +
+			             (tech[i] ? technology[tech[i]].label + '<br>' : '+');
+			    }
+			    // div.innerHTML += 'some other content';
+			    // div.innerHTML += '</div><div class=""pull-right style="width:200px;">'
+			    // div.innerHTML += '<h4>Days of counting</h4>';
+
+				// var tech = Object.keys(technology);
+			    
+
+			 //    for (var i = 0; i < opacities.length; i++) {
+			 //        div.innerHTML +=
+			 //            '<i class="circle" style="background: grey; opacity:'+opacities[i].value+'"></i> < ' +
+			 //             (opacities[i].label ? opacities[i].label + '<br>' : '+');
+			 //    }
+			 //    div.innerHTML += '</div>';
+			    return div;
+			};
+			legend.addTo(map);
+			opacityLegend.onAdd = function (map) {
+
+				var div = L.DomUtil.create('div', 'info legend');
+				div.innerHTML += '<h4>Days of counting</h4>';
+
+				var tech = Object.keys(technology);
+			    
+
+			    for (var i = 0; i < opacities.length; i++) {
+			        div.innerHTML +=
+			            '<i class="circle" style="background: grey; opacity:'+opacities[i].value+'"></i> < ' +
+			             (opacities[i].label ? opacities[i].label + '<br>' : '+');
+			    }
+
+			    return div;
+			};
+			opacityLegend.addTo(map);
+		});
 	}
 </script>
 </body>
