@@ -27,7 +27,7 @@
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 	<style type="text/css">
 		body {
-			padding-top: 53px;
+			padding-top: 51px;
             margin: 0;
         }
         html, body {
@@ -302,95 +302,9 @@
       </div>
   </div>
 </nav>
-	<div id="container">
-		<div id="map"></div>
-	</div>
-	<!-- <div class="info-controls form-inline">
-		<h3>Show Count Data 
-			<button type="button" class="pull-right btn btn-default btn-xs filter" style="" disabled="disabled" id="clear-dates">clear</button>
-		</h3>
-		<p id="filter-statement">
-			Show me 
-			<select type="text" id="countType" class="form-control single filter" >
-				<option value="">all</option>
-				<option selected value="2">bike</option>
-				<option value="1">ped</option>
-			</select> 
-			data for 
-			<select class="form-control single filter" id="season">
-				<option value="">all</option>
-				<option value="0">Winter</option>
-				<option value="1">Spring</option>
-				<option value="2">Summer</option>
-				<option value="3">Fall</option>
-			</select>
-			days
-			<select class="form-control single filter" id="temp-comparison">
-				<option value="">with any weather</option>
-				<option value="#temp-min">warmer than</option>
-				<option value="#temp-max">cooler than</option>
-				<option value="">with rain</option>
-			</select>
-			<span id="temp-field" style="display:none;">
-			than 
-			<input style="width:55px" type="text" class="form-control single filter temp" id="temp" placeholder="90">
-			°F.
-			</span>
-			<button class="btn btn-default single filter has-spinner" id="go-button" type="button">
-				Go!
-			</button>
-			
-			<button class="pull-right btn btn-default btn-xs" id="collapse-button" style="width:20px; margin-top:10px;" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">+</button>
-		</p>
-		
-		<p id="main-alert" style="visibility:hidden;">Alert goes here.</p>
-		
-		<form id="collapseExample" class="collapse form-inline" style="">
-			<div class="form-group" style="" >
-				<select multiple class="form-control special filter" id="date"></select>
-				<select multiple class="form-control special filter" id="dow">
-					<option value="0">Sunday</option>
-					<option value="1">Monday</option>
-					<option value="2">Tuesday</option>
-					<option value="3">Wednesday</option>
-					<option value="4">Thursday</option>
-					<option value="5">Friday</option>
-					<option value="6">Saturday</option>
-				</select>
-			</div>
-			<div class="form-group">
-				<select multiple class="form-control special filter" id="season">
-					<option value="0">Winter</option>
-					<option value="1">Spring</option>
-					<option value="2">Summer</option>
-					<option value="3">Fall</option>
-				</select>
-			</div>
-			<div class="form-group">
-				<select multiple class="form-control special filter" id="weather">
-					<option value="rain">Rain</option>
-					<option value="thunder">Thunder</option>
-					<option value="snow">Snow</option>
-					<option value="fog">Fog</option>
-				</select>
-			</div>
-			<input style="width:55px" type="text" class="form-control special filter temp" id="temp" placeholder="90">
-			<div class="radio">
-			  <label>
-			    <input type="radio" name="tempRadios" class="special filter" id="temp-min" value="gte." checked>
-			    min
-			  </label>
-			</div>
-			<div class="radio">
-			  <label>
-			    <input type="radio" name="tempRadios" class="special filter" id="temp-max" value="lte.">
-			    max
-			  </label>
-			</div>
-			<input style="width:40px" id="scale-factor" data-slider-id='scale-factorSlider' type="text" data-slider-min="1" data-slider-max="10" data-slider-step="1" data-slider-value="5"/>
-		</form>
-	</div> -->
-		<!-- <div class="col-md-6" id="nope"></div> -->
+<div id="container">
+	<div id="map"></div>
+</div>
 <script type="text/javascript">
 	Array.prototype.max = function() {
 	  return Math.max.apply(null, this);
@@ -465,13 +379,8 @@
 		// console.log(e.originalEvent.target);
 		console.log($(e.originalEvent.target).attr('class'));
 		if ($(e.originalEvent.target).attr('class') === 'leaflet-zoom-animated'){
-			// $('#chart').hide();
-			info.update();
-			console.log(initialStroke)
-			resetPrevious();
-
+			closeChart();
 		}
-		ePrev = null;
 	});
 	var legend = L.control({position: 'bottomright'});
 	var opacityLegend = L.control({position: 'bottomleft'});
@@ -487,21 +396,35 @@
 	info.update = function (props) {
 		// ePrev = null;
 		console.log(this);
+		var bootstrapEnv = findBootstrapEnvironment();
 		if (typeof props !== 'undefined'){
-			this._div.style.width = '500px';
-			this._div.style.height = '500px';
+			if (bootstrapEnv !== 'xs'){
+				this._div.style.width = '500px';
+				this._div.style.height = '500px';
+			}
+			else{
+				this._div.style.width = '380px';
+				this._div.style.height = '450px';
+			}
 		}
 		else{
-			this._div.style.width = '167px';
-			this._div.style.height = '53px';
+			this._div.style.width = '190px';
+			this._div.style.height = '90px';
 		}
-	    this._div.innerHTML = '<h4>ARC Active Counts</h4>' +  (props ?
-	        // '<div class="form-group inline-form"><label for="direction-radio">Select direction</label><select class="form-control" style="width:100px" id="direction-radio"><option value="" selected>All</option><option value="1">1</option><option value="2">2</option></select></div>' +
-	        // '<button class="btn btn-default" id="drawChart" onclick="drawChart(chartData, \'means\')">Mean of directions</button>' +
-	        // '<button class="btn btn-default" id="drawChart" onclick="drawChart(chartData, \'totals\')">Sum of directions</button>' +
-	        '<div id="chart"></div>' +
-	        '<p><small>Weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground.com</small><img style="position:relative; bottom:16px;" src="assets/img/wunderground.png" width="69" height="41"></a></p>'
-	        : 'Click a count location');
+		if (props){
+			this._div.innerHTML = 
+			'<h4><strong>ARC Active Counts</strong><button id="close-chart" class="close pull-right">&times;</button></h4>' +
+			'<div id="chart"></div>' +
+	        '<p><small>Weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground.com</small><img style="position:relative; bottom:16px;" src="assets/img/wunderground.png" width="69" height="41"></a></p>';
+	        $('#close-chart').on('click', function(){
+				closeChart();
+			});
+		}
+		else{
+			this._div.innerHTML = 
+			'<h4><strong>ARC Active Counts</strong></h4>' +
+			'Click a count location<br/><strong>OR</strong><br/>Set filter and click <em><strong>Go!</strong></em>';
+		}
 	};
 	info.addTo(map);
 	document.addEventListener('DOMContentLoaded', function() {
@@ -566,7 +489,7 @@
         // Instantiate a slider
 		$('#scale-factor').slider({
           	formatter: function(value) {
-            	return 'Radius size: ' + value;
+            	return 'Marker radius size: ' + value;
           	}
         })
 		.on('change', function(e){ 
@@ -700,6 +623,10 @@
 		}
 		return filters;
 	}
+	function closeChart(){
+		info.update();
+		resetPrevious();
+	}
 	function filterData($this, filters, e){
 		strokeBool = false;
 		console.log(e);
@@ -832,6 +759,22 @@
 			});
 			ePrev = null;
 		}
+	}
+	function findBootstrapEnvironment() {
+	    var envs = ['xs', 'sm', 'md', 'lg'];
+
+	    $el = $('<div>');
+	    $el.appendTo($('body'));
+
+	    for (var i = envs.length - 1; i >= 0; i--) {
+	        var env = envs[i];
+
+	        $el.addClass('hidden-'+env);
+	        if ($el.is(':hidden')) {
+	            $el.remove();
+	            return env;
+	        }
+	    }
 	}
 	function adjustFilters(filters){
 		if (filterType === 'date'){
