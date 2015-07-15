@@ -290,7 +290,7 @@
 						    max
 						  </label>
 						</div>
-						<input style="width:40px" id="scale-factor" data-slider-id='scale-factorSlider' type="text" data-slider-min="1" data-slider-max="10" data-slider-step="1" data-slider-value="5"/>
+						<input style="width:40px" id="scale-factor" data-slider-id='scale-factorSlider' type="text" data-slider-min="1" data-slider-max="10" data-slider-step="1"/>
 					</div>
 		        </form>
 	         <!--  <ul class="nav navbar-nav navbar-right">
@@ -317,6 +317,7 @@
 	var weatherData = [];
 	var initialStroke = 'grey';
 	var highlightStroke = 'white';
+	var initialScaleFactor;
 	var ePrev;
 	var filterMap = {
 		temp: 'maxtempi',
@@ -487,10 +488,16 @@
         	$(".special option:selected").removeAttr("selected");
         });
         // Instantiate a slider
+        var bootstrapEnv = findBootstrapEnvironment();
+        initialScaleFactor = 5;
+		if (bootstrapEnv === 'xs' || bootstrapEnv === 'sm'){
+			initialScaleFactor = 10;
+		}
 		$('#scale-factor').slider({
           	formatter: function(value) {
             	return 'Marker radius size: ' + value;
-          	}
+          	},
+          	value: initialScaleFactor
         })
 		.on('change', function(e){ 
 			console.log(e.value.newValue);
@@ -1362,6 +1369,7 @@
 
 	}
 	function initialize() {
+
 		d3.json("http://192.168.1.68:3000/date?count_date=isnot.null&order=count_date.asc", function(error, json) {
 			var dates = json;
 	    	for (var i = 0; i < dates.length; i++) {
@@ -1408,7 +1416,7 @@
 			            // Here we use the `count` property in GeoJSON verbatim: if it's
 			            // to small or two large, we can use basic math in Javascript to
 			            // adjust it so that it fits the map better.
-			            radius: 5,
+			            radius: initialScaleFactor * 0.6,
 			            fillColor: color,
 			            color: initialStroke,
 			            fillOpacity: 1.0,
