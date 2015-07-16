@@ -318,7 +318,7 @@
 	var initialStroke = 'grey';
 	var highlightStroke = 'white';
 	var initialScaleFactor;
-	var ePrev;
+	var previousLayer;
 	var filterMap = {
 		temp: 'maxtempi',
 		dow: 'dow',
@@ -377,7 +377,7 @@
 	var map = L.mapbox.map('map', 'atlregional.tm2-basemap');
 
 	map.on('click', function(e) {
-		// console.log(e.originalEvent.target);
+		console.log(e);
 		console.log($(e.originalEvent.target).attr('class'));
 		if ($(e.originalEvent.target).attr('class') === 'leaflet-zoom-animated'){
 			closeChart();
@@ -395,7 +395,7 @@
 
 	// method that we will use to update the control based on feature properties passed
 	info.update = function (props) {
-		// ePrev = null;
+		// previousLayer = null;
 		console.log(this);
 		var bootstrapEnv = findBootstrapEnvironment();
 		if (typeof props !== 'undefined'){
@@ -414,7 +414,7 @@
 		}
 		if (props){
 			this._div.innerHTML = 
-			'<h4><strong>ARC Active Counts</strong><button id="close-chart" class="close pull-right">&times;</button></h4>' +
+			'<h4><strong>ARC Active Counts</strong><button id="close-chart" style="font-size:xx-large;" aria-label="Close Count Station Chart" class="close pull-right">&times;</button></h4>' +
 			'<div id="chart"></div>' +
 	        '<p><small>Weather data from <a href="http://www.wunderground.com/?apiref=4f22d8b6220c8d33">wunderground.com</small><img style="position:relative; bottom:16px;" src="assets/img/wunderground.png" width="69" height="41"></a></p>';
 	        $('#close-chart').on('click', function(){
@@ -662,7 +662,7 @@
     	// var visibleStations = [];
     	// if (typeof filters !== 'undefined' || $this.id === 'go-button'){
     		if (typeof filters !== 'undefined'){
-        		params = getParams(filters);
+        		params = getRequestParams(filters);
         		paramsString = serialize(params);
         	}
         	else{
@@ -723,7 +723,7 @@
 	        				var currentOpacity = 0.0;
 
 	        				// If station is currently highlighted, keep it highlighted.
-	        				if (typeof ePrev !== 'undefined' && ePrev !== null && ePrev.target.feature.properties.id == id){
+	        				if (typeof previousLayer !== 'undefined' && previousLayer !== null && previousLayer.feature.properties.id == id){
 	        					currentOpacity = 1.0
 	        					console.log(id + ' highligh');
 	        				}
@@ -744,8 +744,8 @@
     		}); // end get JSON
 
 		// If station was previously selected, get data for single station.
-		if (ePrev !== null){
-			getStationData(ePrev);
+		if (previousLayer !== null){
+			getStationData(previousLayer);
 		}
 	}
 	function getOpacity(numCount){
@@ -758,13 +758,13 @@
 		}
 	}
 	function resetPrevious(){
-		if(typeof ePrev !== 'undefined' && ePrev !== null){
-			ePrev.target.setStyle({
-				fillColor: technology[ePrev.target.feature.properties.sensor_type].color,
+		if(typeof previousLayer !== 'undefined' && previousLayer !== null){
+			previousLayer.setStyle({
+				fillColor: technology[previousLayer.feature.properties.sensor_type].color,
 				color: initialStroke,
 				stroke: strokeBool
 			});
-			ePrev = null;
+			previousLayer = null;
 		}
 	}
 	function findBootstrapEnvironment() {
@@ -864,7 +864,7 @@
 		resetMarkers();
 	}
 	function formatDate(val){return moment(+val).format('YYYY-MM-DD');}
-	function getParams(filters){
+	function getRequestParams(filters){
 		var params = {};
 		if(typeof filters === 'undefined'){
 			return false;
@@ -950,13 +950,12 @@
 	function drawMarker(feature, value, factor){
 		feature.setRadius(value, factor);
 	}
-	function getStationData(e){
-		// $('#weather').empty();
+	function getStationData(layer){
 		resetPrevious();
-		var count = e.target.feature;
-		var id = e.target.feature.properties.id;
-		info.update(e.target.feature.properties);
-		e.target.setStyle({opacity:1.0, color: highlightStroke, stroke: true});
+		var count = layer.feature;
+		var id = layer.feature.properties.id;
+		info.update(layer.feature.properties);
+		layer.setStyle({opacity:1.0, color: highlightStroke, stroke: true});
 		var content = [];
 		var description = '';
 		var dates = [];
@@ -1096,7 +1095,7 @@
 			drawChart(chartData, 'totals');
 			console.log(chartData);
 
-			ePrev = e;
+			previousLayer = layer;
 			currentData = rollup;
 		});
 		$('.modal').modal();
@@ -1368,8 +1367,32 @@
 
 
 	}
-	function initialize() {
+	jQuery.unparam = function (value) {
+	    if (value.length > 1 && value.charAt(0) == '#'){
+	        value = value.substring(1);
+	    }
+	    var
+	    // Object that holds names => values.
+	    params = {},
+	    // Get query string pieces (separated by &)
+	    pieces = value.split('&'),
+	    // Temporary variables used in loop.
+	    pair, i, l;
 
+	    // Loop through query string pieces and assign params.
+	    for (i = 0, l = pieces.length; i < l; i++) {
+	        pair = pieces[i].split('=', 2);
+	        // Repeated parameters with the same name are overwritten. Parameters
+	        // with no value get set to boolean true.
+	        params[decodeURIComponent(pair[0])] = (pair.length == 2 ?
+	            decodeURIComponent(pair[1].replace(/\+/g, ' ')) : true);
+	    }
+	    return params;
+	};
+	function initialize() {
+		var params = jQuery.unparam(window.location.hash);
+		console.log(params);
+		var currentLayer;
 		d3.json("http://192.168.1.68:3000/date?count_date=isnot.null&order=count_date.asc", function(error, json) {
 			var dates = json;
 	    	for (var i = 0; i < dates.length; i++) {
@@ -1411,7 +1434,7 @@
 			counters = L.geoJson(geoJSON, {
 				pointToLayer: function(feature, latlng) {
 					var color = typeof technology !== 'undefined' ? technology[feature.properties.sensor_type].color : 'blue';
-					console.log(color);
+					// console.log(color);
 			        return L.circleMarker(latlng, {
 			            // Here we use the `count` property in GeoJSON verbatim: if it's
 			            // to small or two large, we can use basic math in Javascript to
@@ -1429,18 +1452,23 @@
 			        })
 			    },
 				onEachFeature: function(feature, layer){
-					// layer.bindPopup(
-					// 	"<strong>station_id:</strong> " + feature.properties.id
-			  //       );
 					layer.on({
-						click: getStationData
+						click: function(e){
+							getStationData(layer);
+							// map.panTo(layer.getLatLng());
+						}
 					});
 					stations.push(feature.properties.id);
-
+					if (typeof params.id !== 'undefined' && params.id === feature.properties.id){
+						currentLayer = layer;
+					}
 				}
 			}).addTo(map);
 			console.log(counters);
 			map.fitBounds(counters.getBounds());
+			if (typeof currentLayer !== 'undefined'){
+				getStationData(currentLayer);
+			}
 			legend.onAdd = function (map) {
 
 				var div = L.DomUtil.create('div', 'info legend row');
